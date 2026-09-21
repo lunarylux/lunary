@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunary (LUX) — Mining</title>
+<link rel="icon" type="image/png" href="https://lunary.xyz/asset/lunary.png">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-1: #0a0a1a;
+    --bg-2: #1a1a3a;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --primary: #a78bfa;
+    --secondary: #60a5fa;
+    --gold: #fbbf24;
+    --gold-2: #f59e0b;
+    --text: #ffffff;
+    --muted: #888;
+    --success: #34d399;
+    --danger: #ef4444;
+  }
+
+  html, body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-1);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* Animated gradient background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,0.18), transparent 60%),
+      radial-gradient(1000px 700px at 100% 100%, rgba(96,165,250,0.15), transparent 60%),
+      linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    z-index: -2;
+  }
+
+  /* Star particles */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 80% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff, transparent),
+      radial-gradient(1px 1px at 60% 10%, #fff, transparent),
+      radial-gradient(1px 1px at 25% 85%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 90% 75%, #fff, transparent),
+      radial-gradient(1px 1px at 55% 50%, #fff, transparent),
+      radial-gradient(1px 1px at 15% 55%, #fff, transparent);
+    opacity: 0.35;
+    z-index: -1;
+    animation: twinkle 8s infinite alternate;
+  }
+
+  @keyframes twinkle {
+    from { opacity: 0.2; }
+    to { opacity: 0.5; }
+  }
+
+  .container {
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .logo-wrap {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    margin-bottom: 14px;
+  }
+
+  .logo-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--primary), var(--secondary), var(--primary));
+    filter: blur(14px);
+    opacity: 0.55;
+    animation: spin 8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .logo {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Fallback moon kalau logo gagal load */
+  .logo-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a2a4a, #0a0a1a);
+    z-index: -1;
+  }
+
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: border-color 0.3s;
+  }
+
+  .card:hover {
+    border-color: rgba(167,139,250,0.3);
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+  }
+
+  .row + .row {
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .label { color: var(--muted); }
+  .value {
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.gold {
+    background: linear-gradient(90deg, var(--gold), var(--gold-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Timer */
+  .timer-card {
+    text-align: center;
+    padding: 26px 20px;
+  }
+
+  #timer {
+    font-size: 44px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    min-height: 52px;
+  }
+
+  #timerLabel {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    margin-top: 16px;
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 100px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 12px rgba(167,139,250,0.6);
+  }
+
+  .pow-info {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+    font-variant-numeric: tabular-nums;
+    min-height: 16px;
+  }
+
+  /* Buttons */
+  button {
+    width: 100%;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.3s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+
+  button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(0);
+  }
+
+  #connectBtn {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 16px;
+  }
+
+  #connectBtn:hover {
+    background: rgba(255,255,255,0.12);
+  }
+
+  #startBtn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(167,139,250,0.35);
+  }
+
+  #startBtn:not(:disabled):hover {
+    box-shadow: 0 8px 26px rgba(167,139,250,0.5);
+  }
+
+  #startBtn:disabled {
+    background: rgba(255,255,255,0.05);
+    color: #555;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  #claimBtn {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #1a1a2e;
+    box-shadow: 0 6px 20px rgba(251,191,36,0.3);
+  }
+
+  #claimBtn:not(:disabled):hover {
+    box-shadow: 0 8px 26px rgba(251,191,36,0.45);
+  }
+
+  #claimBtn:disabled {
+    background: rgba(255,255,255,0.05);
+    color: #555;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Status */
+  #status {
+    text-align: center;
+    font-size: 13px;
+    color: #bbb;
+    padding: 14px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    margin-top: 4px;
+    transition: color 0.3s;
+  }
+
+  #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
+  #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+    margin-top: 24px;
+  }
+
+  .footer a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* Hidden */
+  .hidden { display: none !important; }
+
+  /* Responsive */
+  @media (max-width: 400px) {
+    #timer { font-size: 36px; }
+    h1 { font-size: 26px; }
+    .logo, .logo-wrap { width: 80px; height: 80px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-wrap">
+      <div class="logo-fallback">🌙</div>
+      <img
+        id="logo"
+        class="logo"
+        src="https://lunary.xyz/asset/lunary.png"
+        alt="Lunary Logo"
+        onerror="this.style.display='none';"
+      />
+    </div>
+    <h1>Lunary</h1>
+    <div class="tagline">LUX · PoW Mining · 4× Halving</div>
+  </div>
+
+  <!-- CONNECT -->
+  <button id="connectBtn">🔌 Connect Wallet</button>
+
+  <!-- STATS -->
+  <div class="card" id="statsCard" style="display:none;">
+    <div class="row">
+      <span class="label">Wallet</span>
+      <span class="value" id="wallet">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Reward saat ini</span>
+      <span class="value gold" id="reward">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Epoch</span>
+      <span class="value" id="epoch">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Total mined</span>
+      <span class="value" id="mined">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Max supply</span>
+      <span class="value" id="maxSupply">112.333 LUX</span>
+    </div>
+  </div>
+
+  <!-- MINING -->
+  <div class="card timer-card" id="miningCard" style="display:none;">
+    <div id="timer">--:--:--</div>
+    <div id="timerLabel">Waktu mining</div>
+
+    <div class="progress-wrap">
+      <div id="progressBar"></div>
+    </div>
+    <div class="pow-info" id="powProgress">PoW: siap</div>
+
+    <div style="margin-top:20px;">
+      <button id="startBtn" disabled>▶️ Mulai Mining</button>
+      <button id="claimBtn" disabled>💰 Claim Reward</button>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div id="status">Belum connect</div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+// ==================================================
+// GANTI DENGAN ALAMAT CONTRACT ANDA
+// ==================================================
+const CONTRACT_ADDRESS = "0x...";
+
+const ABI = [
+  "function startMining(bytes32) external",
+  "function claim(uint256) external",
+  "function canClaim(address) view returns (bool)",
+  "function timeRemaining(address) view returns (uint256)",
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)"
+];
+
+const MINING_DURATION = 4 * 3600; // 4 jam dalam detik
+
+let provider, signer, contract, userAddress;
+let timerInterval, powInterval;
+let foundNonce = null;
+let sessionStartTime = 0;
+
+const $ = (id) => document.getElementById(id);
+
+// ==================================================
+// CONNECT WALLET
+// ==================================================
+$('connectBtn').onclick = async () => {
+  if (!window.ethereum) {
+    setStatus("❌ Install MetaMask dulu!", "error");
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    userAddress = await signer.getAddress();
+
+    $('wallet').innerText = shortAddr(userAddress);
+    $('connectBtn').style.display = 'none';
+    $('statsCard').style.display = 'block';
+    $('miningCard').style.display = 'block';
+    setStatus("Connected ✅", "success");
+
+    await updateUI();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+  } catch (e) {
+    setStatus("❌ " + (e.message || e), "error");
+  }
+};
+
+// ==================================================
+// UPDATE UI
+// ==================================================
+async function updateUI() {
+  if (!contract) return;
+
+  const [reward, epoch, mined, session, maxSupply] = await Promise.all([
+    contract.currentReward(),
+    contract.currentEpoch(),
+    contract.totalMined(),
+    contract.sessions(userAddress),
+    contract.MAX_SUPPLY()
+  ]);
+
+  $('reward').innerText = fmtUnits(reward) + " LUX";
+  $('epoch').innerText = epoch.toString();
+  $('mined').innerText = fmtUnits(mined) + " LUX";
+  $('maxSupply').innerText = fmtUnits(maxSupply) + " LUX";
+
+  sessionStartTime = Number(session.startTime);
+
+  const startBtn = $('startBtn');
+  const claimBtn = $('claimBtn');
+
+  // STATE 1: Belum mulai
+  if (!session.active && !session.claimed) {
+    startBtn.disabled = false;
+    startBtn.innerText = "▶️ Mulai Mining";
+    claimBtn.disabled = true;
+    $('timer').innerText = "--:--:--";
+    $('timerLabel').innerText = "Siap memulai";
+    setProgress(0);
+    $('powProgress').innerText = "PoW: siap";
+  }
+  // STATE 2: Sedang mining
+  else if (session.active && !session.claimed) {
+    startBtn.disabled = true;
+    startBtn.innerText = "⛏️ Mining berjalan...";
+    $('timerLabel').innerText = "Sisa waktu mining";
+
+    const canClaimNow = await contract.canClaim(userAddress);
+    claimBtn.disabled = !canClaimNow || foundNonce === null;
+
+    if (!canClaimNow) {
+      startPoW(session.challenge);
+    } else {
+      $('timer').innerText = "✅ Siap Claim!";
+    }
+  }
+  // STATE 3: Sudah claim → bisa start lagi
+  else if (!session.active && session.claimed) {
+    startBtn.disabled = false;
+    startBtn.innerText = "🔄 Mulai Mining Lagi";
+    claimBtn.disabled = true;
+    $('timer').innerText = "✅ Selesai";
+    $('timerLabel').innerText = "Klik Start untuk siklus berikutnya";
+    setProgress(100);
+  }
+}
+
+// ==================================================
+// PROOF OF WORK (background)
+// ==================================================
+function startPoW(challenge) {
+  if (powInterval || foundNonce !== null) return;
+
+  const DIFFICULTY = 100_000n;
+  const MAX_UINT = (1n << 256n) - 1n;
+  const target = MAX_UINT / DIFFICULTY;
+  let nonce = 0;
+  let hashCount = 0;
+  const startTime = Date.now();
+
+  powInterval = setInterval(async () => {
+    const batch = 500;
+    for (let i = 0; i < batch; i++) {
+      const hash = ethers.solidityPackedKeccak256(
+        ["bytes32", "address", "uint256"],
+        [challenge, userAddress, nonce]
+      );
+      hashCount++;
+      if (BigInt(hash) < target) {
+        clearInterval(powInterval);
+        powInterval = null;
+        foundNonce = nonce;
+        $('powProgress').innerText = `✅ PoW selesai! Nonce: ${nonce}`;
+        const canClaimNow = await contract.canClaim(userAddress);
+        if (canClaimNow) $('claimBtn').disabled = false;
+        return;
+      }
+      nonce++;
+    }
+    const elapsed = (Date.now() - startTime) / 1000;
+    const rate = Math.round(hashCount / elapsed);
+    $('powProgress').innerText =
+      `PoW: ${hashCount.toLocaleString('id-ID')} hash · ${rate.toLocaleString('id-ID')} H/s`;
+  }, 50);
+}
+
+// ==================================================
+// TIMER
+// ==================================================
+async function updateTimer() {
+  if (!contract || !userAddress) return;
+
+  try {
+    const remaining = await contract.timeRemaining(userAddress);
+    const sec = Number(remaining);
+
+    if (sec <= 0) {
+      const s = await contract.sessions(userAddress);
+      if (s.active && !s.claimed) {
+        $('timer').innerText = "✅ Siap Claim!";
+        $('timerLabel').innerText = "Klik tombol Claim di bawah";
+        setProgress(100);
+        if (foundNonce !== null) $('claimBtn').disabled = false;
+      }
+      return;
+    }
+
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s2 = sec % 60;
+    $('timer').innerText =
+      `${p2(h)}:${p2(m)}:${p2(s2)}`;
+
+    // Progress: (elapsed / total) * 100
+    const elapsed = MINING_DURATION - sec;
+    const progress = Math.min(100, (elapsed / MINING_DURATION) * 100);
+    setProgress(progress);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function setProgress(pct) {
+  $('progressBar').style.width = pct + '%';
+}
+
+// ==================================================
+// START MINING
+// ==================================================
+$('startBtn').onclick = async () => {
+  try {
+    setStatus("⏳ Memulai mining...");
+    foundNonce = null;
+    if (powInterval) { clearInterval(powInterval); powInterval = null; }
+    $('powProgress').innerText = "PoW: siap";
+    setProgress(0);
+
+    const clientSeed = ethers.randomBytes(32);
+    const tx = await contract.startMining(clientSeed);
+    setStatus("⏳ Menunggu konfirmasi...");
+    await tx.wait();
+
+    setStatus("✅ Mining dimulai! Tunggu 4 jam.", "success");
+    await updateUI();
+  } catch (e) {
+    setStatus("❌ " + (e.reason || e.message || e), "error");
+  }
+};
+
+// ==================================================
+// CLAIM
+// ==================================================
+$('claimBtn').onclick = async () => {
+  if (foundNonce === null) {
+    setStatus("⏳ Menunggu PoW selesai...");
+    return;
+  }
+  try {
+    setStatus("⏳ Claim...");
+    const tx = await contract.claim(foundNonce);
+    setStatus("⏳ Menunggu konfirmasi...");
+    await tx.wait();
+
+    setStatus("🎉 Berhasil claim LUX! Klik Start lagi.", "success");
+    foundNonce = null;
+    await updateUI();
+  } catch (e) {
+    setStatus("❌ " + (e.reason || e.message || e), "error");
+  }
+};
+
+// ==================================================
+// HELPERS
+// ==================================================
+function shortAddr(a) {
+  return a.slice(0, 6) + "..." + a.slice(-4);
+}
+
+function fmtUnits(v) {
+  return ethers.formatUnits(v, 8);
+}
+
+function p2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function setStatus(msg, type = "") {
+  const el = $('status');
+  el.innerText = msg;
+  el.className = type;
+}
+</script>
+</body>
+</html>
