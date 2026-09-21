@@ -211,6 +211,13 @@
     font-size: 11px; color: var(--muted); text-align: center;
     font-variant-numeric: tabular-nums;
   }
+  #debugPanel {
+    margin-top: 10px; font-size: 11px; color: #f87171;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; padding: 10px; line-height: 1.5;
+    word-break: break-all; max-height: 160px; overflow-y: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
   @media (max-width: 400px) {
     #timer { font-size: 36px; }
     h1 { font-size: 26px; }
@@ -288,6 +295,7 @@
       </div>
       <button id="payFeeBtn" type="button" disabled>💳 Pay Fee & Register</button>
     </div>
+    <div id="debugPanel" class="hidden"></div>
   </div>
 
   <!-- MINING -->
@@ -338,11 +346,6 @@
 // ==================================================
 window.addEventListener("error", function(e) {
   console.error("Global error:", e.message, e.filename, e.lineno);
-  var st = document.getElementById("status");
-  if (st) {
-    st.className = "error";
-    st.innerText = "⚠️ Script error: " + e.message + " (line " + e.lineno + ")";
-  }
 });
 
 // ==================================================
@@ -357,6 +360,7 @@ var SITE_URL = "https://lunarylux.github.io";
 // ABI
 // ==================================================
 var ABI = [
+  // token
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
@@ -365,6 +369,7 @@ var ABI = [
   "function MAX_SUPPLY() view returns (uint256)",
   "function MIN_CLAIM_AMOUNT() view returns (uint256)",
 
+  // mining
   "function startMining(bytes32 clientSeed)",
   "function claim(uint256 nonce)",
   "function cancelMining()",
@@ -378,18 +383,21 @@ var ABI = [
   "function DIFFICULTY() view returns (uint256)",
   "function MINING_DURATION() view returns (uint256)",
 
+  // fee miner
   "function minerFeeEnabled() view returns (bool)",
   "function minerFee() view returns (uint256)",
   "function addMiner(address miner) payable",
   "function authorizedMiners(address) view returns (bool)",
   "function isMinerAllowed(address) view returns (bool)",
 
+  // pending claim
   "function minedBalance(address) view returns (uint256)",
   "function totalPendingClaims() view returns (uint256)",
   "function canWithdraw(address) view returns (bool)",
   "function amountNeededToWithdraw(address) view returns (uint256)",
   "function claimToWallet()",
 
+  // events
   "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge)",
   "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)",
   "event MinedAccumulated(address indexed user, uint256 amount, uint256 newBalance)",
@@ -472,6 +480,20 @@ function setPowInfo(msg) {
   if (el) el.innerText = msg;
 }
 
+function showDebug(msg) {
+  var el = $("debugPanel");
+  if (!el) return;
+  el.classList.remove("hidden");
+  el.innerText = msg;
+  console.error("[DEBUG]", msg);
+}
+function hideDebug() {
+  var el = $("debugPanel");
+  if (!el) return;
+  el.classList.add("hidden");
+  el.innerText = "";
+}
+
 function decodeError(e) {
   if (!e) return "Unknown error";
   if (typeof e === "string") return e;
@@ -508,18 +530,28 @@ function checkWalletAvailability() {
         '<b>Solution:</b> Open this page in <b>MetaMask Browser</b>.<br><br>' +
         '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
         'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
-        '🦊 Open in MetaMask</a>' +
-        '<br><br><span style="font-size:11px;color:#888;">Or install MetaMask from Play Store / App Store.</span>'
+        '🦊 Open in MetaMask</a>'
     };
   }
   return {
     ok: false,
     html: '❌ MetaMask not detected.<br><br>' +
-      'Install the MetaMask extension in your browser:<br>' +
       '<a href="https://metamask.io/download/" target="_blank" ' +
       'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
       '⬇️ Download MetaMask</a>'
   };
+}
+
+// ==================================================
+// SAFE CALL — bungkus call supaya tidak reject Promise.all
+// ==================================================
+async function safeCall(fn, fallback) {
+  try {
+    return await fn();
+  } catch (e) {
+    console.warn("safeCall failed:", e);
+    return fallback;
+  }
 }
 
 // ==================================================
@@ -585,12 +617,57 @@ async function ensureSepolia() {
 }
 
 // ==================================================
+// VERIFY CONTRACT
+// ==================================================
+async function verifyContractInterface(prov) {
+  // Cek fungsi penting ada atau tidak
+  var checks = {};
+  var testFns = [
+    "currentReward",
+    "currentEpoch",
+    "totalMined",
+    "MAX_SUPPLY",
+    "DIFFICULTY",
+    "MINING_DURATION",
+    "MIN_CLAIM_AMOUNT",
+    "minerFeeEnabled",
+    "minerFee",
+    "authorizedMiners",
+    "isMinerAllowed",
+    "minedBalance"
+  ];
+
+  var iface = new ethers.utils.Interface(ABI);
+  for (var i = 0; i < testFns.length; i++) {
+    var name = testFns[i];
+    try {
+      var fragment = iface.getFunction(name);
+      var data;
+      if (fragment.inputs.length === 0) {
+        data = iface.encodeFunctionData(name, []);
+      } else if (fragment.inputs[0].type === "address") {
+        data = iface.encodeFunctionData(name, [userAddress]);
+      } else {
+        data = iface.encodeFunctionData(name, []);
+      }
+      var res = await prov.call({ to: CONTRACT_ADDRESS, data: data });
+      checks[name] = (res && res !== "0x") ? "OK" : "EMPTY";
+    } catch (e) {
+      checks[name] = "MISSING: " + (e.message || e).slice(0, 80);
+    }
+  }
+  return checks;
+}
+
+// ==================================================
 // CONNECT CORE
 // ==================================================
 async function doConnect() {
   if (isConnecting) return;
   isConnecting = true;
   try {
+    hideDebug();
+
     if (typeof ethers === "undefined") {
       setStatus("❌ ethers library failed to load. Check internet & reload.", "error");
       return;
@@ -639,20 +716,34 @@ async function doConnect() {
       return;
     }
 
+    // ===== VERIFY INTERFACE =====
+    setStatus("🔍 Verifying contract interface...", "info");
+    var checks = await verifyContractInterface(provider);
+    console.log("Contract interface check:", checks);
+
+    var missing = [];
+    for (var k in checks) {
+      if (checks[k] !== "OK") missing.push(k + ": " + checks[k]);
+    }
+    if (missing.length > 0) {
+      showDebug("⚠️ Some functions failed:\n" + missing.join("\n"));
+    }
+
+    // ===== CACHE CONSTANTS =====
     try {
       var d = await contract.DIFFICULTY();
       cachedDifficulty = BigInt(d.toString());
-    } catch (x) { cachedDifficulty = 100000n; }
+    } catch (x) { console.warn("DIFFICULTY() failed:", x); cachedDifficulty = 100000n; }
 
     try {
       var md = await contract.MINING_DURATION();
       sessionDuration = Number(md);
-    } catch (x) { sessionDuration = 14400; }
+    } catch (x) { console.warn("MINING_DURATION() failed:", x); sessionDuration = 14400; }
 
     try {
       var mc = await contract.MIN_CLAIM_AMOUNT();
       cachedMinClaim = BigInt(mc.toString());
-    } catch (x) { cachedMinClaim = 20n * 100000000n; }
+    } catch (x) { console.warn("MIN_CLAIM_AMOUNT() failed:", x); cachedMinClaim = 20n * 100000000n; }
 
     await syncServerTime();
 
@@ -691,70 +782,65 @@ async function doConnect() {
 }
 
 // ==================================================
-// UPDATE UI
+// UPDATE UI — pakai safeCall supaya tidak ada yang bikin crash
 // ==================================================
 async function updateUI() {
   if (!contract || !userAddress) return;
   try {
-    var results = await Promise.all([
-      contract.currentReward(),
-      contract.currentEpoch(),
-      contract.totalMined(),
-      contract.MAX_SUPPLY(),
-      contract.sessions(userAddress),
-      contract.balanceOf(userAddress),
-      contract.minerFeeEnabled(),
-      contract.minerFee(),
-      contract.authorizedMiners(userAddress),
-      contract.isMinerAllowed(userAddress),
-      contract.minedBalance(userAddress),
-      contract.totalPendingClaims().catch(function() { return 0; })
-    ]);
+    // ===== FETCH dengan safeCall =====
+    var reward = await safeCall(function() { return contract.currentReward(); }, 0);
+    var epoch = await safeCall(function() { return contract.currentEpoch(); }, 0);
+    var mined = await safeCall(function() { return contract.totalMined(); }, 0);
+    var maxSupply = await safeCall(function() { return contract.MAX_SUPPLY(); }, 0);
+    var bal = await safeCall(function() { return contract.balanceOf(userAddress); }, 0);
+    var feeEnabled = await safeCall(function() { return contract.minerFeeEnabled(); }, false);
+    var fee = await safeCall(function() { return contract.minerFee(); }, 0);
+    var authorized = await safeCall(function() { return contract.authorizedMiners(userAddress); }, false);
+    var allowed = await safeCall(function() { return contract.isMinerAllowed(userAddress); }, false);
+    var pendingBal = await safeCall(function() { return contract.minedBalance(userAddress); }, 0);
 
-    var reward = results[0], epoch = results[1], mined = results[2];
-    var maxSupply = results[3], session = results[4], bal = results[5];
-    var feeEnabled = results[6], fee = results[7];
-    var authorized = results[8], allowed = results[9];
-    var pendingBal = results[10];
+    var session = await safeCall(function() {
+      return contract.sessions(userAddress);
+    }, { startTime: 0, challenge: ethers.constants.HashZero, active: false, claimed: false });
 
-    cachedMinerFeeEnabled = feeEnabled;
-    cachedMinerFee = BigInt(fee.toString());
-    cachedMinerAuthorized = authorized;
-    cachedMinerAllowed = allowed;
-    cachedPendingBalance = BigInt(pendingBal.toString());
+    cachedMinerFeeEnabled = !!feeEnabled;
+    cachedMinerFee = BigInt((fee || 0).toString());
+    cachedMinerAuthorized = !!authorized;
+    cachedMinerAllowed = !!allowed;
+    cachedPendingBalance = BigInt((pendingBal || 0).toString());
 
-    // stats
-    $("reward").innerText = fmtLUX(reward) + " LUX";
-    $("epoch").innerText = epoch.toString();
-    $("mined").innerText = fmtLUX(mined) + " LUX";
-    $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
-    $("luxBal").innerText = fmtLUX(bal) + " LUX";
+    // ===== STATS =====
+    $("reward").innerText = reward ? fmtLUX(reward) + " LUX" : "-";
+    $("epoch").innerText = epoch ? epoch.toString() : "-";
+    $("mined").innerText = mined ? fmtLUX(mined) + " LUX" : "-";
+    $("maxSupply").innerText = maxSupply ? fmtLUX(maxSupply) + " LUX" : "-";
+    $("luxBal").innerText = bal ? fmtLUX(bal) + " LUX" : "0 LUX";
 
-    // fee & miner
+    // ===== FEE & MINER =====
     if (feeEnabled) {
-      $("minerFeeInfo").innerHTML = `<span class="badge warn">ON</span> ${fmtEth(fee)} ETH`;
+      $("minerFeeInfo").innerHTML = '<span class="badge warn">ON</span> ' + fmtEth(fee) + " ETH";
     } else {
-      $("minerFeeInfo").innerHTML = `<span class="badge ok">OFF</span> Free`;
+      $("minerFeeInfo").innerHTML = '<span class="badge ok">OFF</span> Free';
     }
-    $("minerAuthStatus").innerHTML = authorized      ? '<span class="badge ok">AUTHORIZED</span>'
+    $("minerAuthStatus").innerHTML = authorized
+      ? '<span class="badge ok">AUTHORIZED</span>'
       : '<span class="badge err">NOT YET</span>';
     $("minerAllowedStatus").innerHTML = allowed
       ? '<span class="badge ok">YES</span>'
       : '<span class="badge err">NO</span>';
 
-    // pay fee button
     var payWrap = $("payFeeWrap");
     var payBtn = $("payFeeBtn");
     if (feeEnabled && !authorized) {
       payWrap.classList.remove("hidden");
       payBtn.disabled = false;
-      payBtn.innerText = `💳 Pay ${fmtEth(fee)} ETH & Register Miner`;
+      payBtn.innerText = "💳 Pay " + fmtEth(fee) + " ETH & Register Miner";
     } else {
       payWrap.classList.add("hidden");
       payBtn.disabled = true;
     }
 
-    // pending balance
+    // ===== PENDING BALANCE =====
     var pendingEl = $("pendingBalance");
     var minClaimEl = $("minClaimInfo");
     var pendingBarEl = $("pendingBar");
@@ -765,29 +851,30 @@ async function updateUI() {
     minClaimEl.innerText = fmtLUX(cachedMinClaim) + " LUX";
 
     var pctPending = cachedMinClaim > 0n
-      ? Math.min(100, Number((pendingBal * 10000n) / cachedMinClaim) / 100)
+      ? Math.min(100, Number((cachedPendingBalance * 10000n) / cachedMinClaim) / 100)
       : 0;
     pendingBarEl.style.width = pctPending + "%";
 
-    if (pendingBal >= cachedMinClaim && cachedMinClaim > 0n) {
-      pendingInfoEl.innerHTML = `<span style="color:var(--success);font-weight:700;">✅ Ready to withdraw!</span>`;
+    if (cachedPendingBalance >= cachedMinClaim && cachedMinClaim > 0n) {
+      pendingInfoEl.innerHTML = '<span style="color:var(--success);font-weight:700;">✅ Ready to withdraw!</span>';
       withdrawBtn.disabled = false;
-      withdrawBtn.innerText = `🏦 Withdraw ${fmtLUX(pendingBal)} LUX to Wallet`;
+      withdrawBtn.innerText = "🏦 Withdraw " + fmtLUX(cachedPendingBalance) + " LUX to Wallet";
     } else {
-      var needed = cachedMinClaim - pendingBal;
+      var needed = cachedMinClaim - cachedPendingBalance;
       if (needed < 0n) needed = 0n;
-      pendingInfoEl.innerHTML = `Need <b>${fmtLUX(needed)} LUX</b> more to withdraw`;
+      pendingInfoEl.innerHTML = "Need <b>" + fmtLUX(needed) + " LUX</b> more to withdraw";
       withdrawBtn.disabled = true;
-      withdrawBtn.innerText = `🏦 Withdraw (min ${fmtLUX(cachedMinClaim)} LUX)`;
+      withdrawBtn.innerText = "🏦 Withdraw (min " + fmtLUX(cachedMinClaim) + " LUX)";
     }
 
-    // ===== Mining state machine =====
+    // ===== MINING STATE MACHINE =====
     var startBtn = $("startBtn");
     var claimBtn = $("claimBtn");
 
-    // IMPORTANT: Reset visual state tombol start setiap updateUI
-    // supaya tidak "nyangkut" disabled setelah authorize.
-    if (!session.active && !session.claimed) {
+    var active = session && session.active;
+    var claimed = session && session.claimed;
+
+    if (!active && !claimed) {
       // IDLE
       if (!allowed) {
         startBtn.disabled = true;
@@ -807,7 +894,7 @@ async function updateUI() {
       canClaimTime = false;
       sessionStartTime = 0;
 
-    } else if (session.active && !session.claimed) {
+    } else if (active && !claimed) {
       // MINING
       cachedChallenge = session.challenge;
       sessionStartTime = Number(session.startTime);
@@ -864,6 +951,7 @@ async function updateUI() {
     }
   } catch (e) {
     console.error("updateUI error:", e);
+    showDebug("updateUI error: " + (e.message || e));
   }
 }
 
@@ -972,7 +1060,7 @@ function startPoW(challenge) {
 }
 
 // ==================================================
-// PAY FEE (addMiner)
+// PAY FEE
 // ==================================================
 async function handlePayFee() {
   if (isWorking) return;
@@ -992,7 +1080,7 @@ async function handlePayFee() {
     }
 
     var feeLabel = fmtEth(cachedMinerFee);
-    if (!confirm(`Pay entry fee ${feeLabel} ETH to register as a miner?\n\nFee is one-time, non-refundable.`)) {
+    if (!confirm("Pay entry fee " + feeLabel + " ETH to register as a miner?\n\nFee is one-time, non-refundable.")) {
       return;
     }
 
@@ -1003,16 +1091,12 @@ async function handlePayFee() {
 
     setStatus("⏳ Confirming whitelist status...", "info");
 
-    // ====== RETRY LOOP: tunggu sampai state on-chain benar-benar update ======
     var maxRetries = 10;
     var authorized = false;
     for (var i = 0; i < maxRetries; i++) {
       try {
         var a = await contract.authorizedMiners(userAddress);
-        if (a) {
-          authorized = true;
-          break;
-        }
+        if (a) { authorized = true; break; }
       } catch (err) {
         console.warn("retry authorizedMiners:", err);
       }
@@ -1021,32 +1105,17 @@ async function handlePayFee() {
 
     if (!authorized) {
       setStatus(
-        "⚠️ Transaction confirmed but whitelist not updated. " +
-        "Try clicking Refresh or reload the page.",
+        "⚠️ Transaction confirmed but whitelist not updated. Reload the page.",
         "error"
       );
       await updateUI();
       return;
     }
 
-    // Force update cache dan tombol
     cachedMinerAuthorized = true;
     cachedMinerAllowed = true;
 
     await updateUI();
-
-    // Safety: kalau updateUI tetap tidak enable, paksa aktifkan manual
-    var sb = $("startBtn");
-    if (sb && sb.disabled && !cachedMinerFeeEnabled === false) {
-      // cek ulang
-      try {
-        var sess = await contract.sessions(userAddress);
-        if (!sess.active && !sess.claimed) {
-          sb.disabled = false;
-          sb.innerText = "▶️ Start Mining";
-        }
-      } catch (e) {}
-    }
 
     setStatus(
       "🎉 Successfully registered! Click <b>Start Mining</b> to begin.",
@@ -1067,7 +1136,6 @@ async function handleStartMining() {
   if (isWorking) return;
   isWorking = true;
   try {
-    // Re-check on-chain, jangan bergantung cache saja
     try {
       var allowed = await contract.isMinerAllowed(userAddress);
       if (!allowed) {
@@ -1076,7 +1144,6 @@ async function handleStartMining() {
         return;
       }
     } catch (chkErr) {
-      // fallback ke cache
       if (!cachedMinerAllowed) {
         setStatus("🔒 You are not registered as a miner. Please pay the fee first.", "error");
         return;
@@ -1133,7 +1200,7 @@ async function handleStartMining() {
 }
 
 // ==================================================
-// CLAIM → into minedBalance
+// CLAIM
 // ==================================================
 async function handleClaim() {
   if (isWorking) return;
@@ -1185,7 +1252,7 @@ async function handleClaim() {
 }
 
 // ==================================================
-// WITHDRAW TO WALLET
+// WITHDRAW
 // ==================================================
 async function handleWithdraw() {
   if (isWorking) return;
@@ -1200,7 +1267,7 @@ async function handleWithdraw() {
       return;
     }
 
-    if (!confirm(`Withdraw ${fmtLUX(cachedPendingBalance)} LUX to your wallet?`)) return;
+    if (!confirm("Withdraw " + fmtLUX(cachedPendingBalance) + " LUX to your wallet?")) return;
 
     setStatus("⏳ Withdrawing to wallet...", "info");
 
@@ -1225,7 +1292,7 @@ async function handleWithdraw() {
 }
 
 // ==================================================
-// BIND EVENT LISTENERS
+// BIND EVENTS
 // ==================================================
 function bindEventListeners() {
   var btn = $("connectBtn");
@@ -1293,10 +1360,6 @@ function bindWalletListeners() {
 // ==================================================
 async function init() {
   console.log("=== Lunary Mining Init ===");
-  console.log("ethers:", typeof ethers !== "undefined");
-  console.log("window.ethereum:", typeof window.ethereum);
-  console.log("isMobile:", isMobile());
-
   bindEventListeners();
 
   if (typeof ethers === "undefined") {
