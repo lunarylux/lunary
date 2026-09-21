@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @notice Fair launch token: PoW mining, 4x halving, tanpa tax
  * @dev Decimals 8, max supply 112.333, rescue LUX tidak ganggu mining
  * @dev + Fee untuk add miner baru (on/off, default 1 ETH)
+ * @dev + Minimum claim ke wallet 20 LUX
  */
 contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     using SafeERC20 for IERC20;
@@ -32,7 +33,11 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     uint256 public constant RESCUE_DELAY = 1 days;
 
     // ============ DEFAULT FEE ============
-    uint256 public constant DEFAULT_MINER_FEE = 1 ether; // 1 ETH (atau 1 native token)
+    uint256 public constant DEFAULT_MINER_FEE = 1 ether;
+
+    // ============ MINIMUM CLAIM KE WALLET ============
+    /// @notice Minimal saldo mined untuk bisa withdraw ke wallet (20 LUX)
+    uint256 public constant MIN_CLAIM_AMOUNT = 20 * 10**_DECIMALS;
 
     // ============ STATE ============
     uint256 public totalClaims;
@@ -56,18 +61,18 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     bytes32[] public rescueIds;
 
     // ============ STATE FEE MINER ============
-    /// @notice Status aktif/nonaktif fee untuk add miner baru
     bool public minerFeeEnabled;
-    /// @notice Nominal fee untuk menambahkan miner baru (default 1 ETH)
     uint256 public minerFee;
-    /// @notice Penerima fee (default owner)
     address public feeRecipient;
-    /// @notice Total fee yang sudah terkumpul (belum di-withdraw)
     uint256 public accumulatedFees;
-    /// @notice Daftar address miner yang sudah authorized (bayar fee)
     mapping(address => bool) public authorizedMiners;
-    /// @notice Jumlah miner yang sudah authorized
     uint256 public totalAuthorizedMiners;
+
+    // ============ STATE PENDING CLAIM ============
+    /// @notice Saldo LUX hasil mining yang belum di-withdraw ke wallet
+    mapping(address => uint256) public minedBalance;
+    /// @notice Total LUX yang masih tertahan (belum di-withdraw user)
+    uint256 public totalPendingClaims;
 
     // ============ EVENT ============
     event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge);
@@ -85,9 +90,12 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     event MinerRemoved(address indexed miner);
     event FeesWithdrawn(address indexed to, uint256 amount);
 
+    // Event Claim ke Wallet
+    event MinedAccumulated(address indexed user, uint256 amount, uint256 newBalance);
+    event WithdrawnToWallet(address indexed user, uint256 amount);
+
     // ============ CONSTRUCTOR ============
     constructor() ERC20("Lunary", "LUX") Ownable(msg.sender) {
-        // Default: fee aktif dengan 1 ETH
         minerFeeEnabled = true;
         minerFee = DEFAULT_MINER_FEE;
         feeRecipient = msg.sender;
@@ -139,15 +147,30 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         return DIFFICULTY;
     }
 
-    /// @notice Cek apakah user boleh mining (berdasarkan status fee)
     function isMinerAllowed(address user) public view returns (bool) {
         if (!minerFeeEnabled) return true;
         return authorizedMiners[user];
     }
 
+    /// @notice Cek apakah user sudah bisa withdraw ke wallet
+    function canWithdraw(address user) public view returns (bool) {
+        return minedBalance[user] >= MIN_CLAIM_AMOUNT;
+    }
+
+    /// @notice Saldo mined user yang belum di-withdraw
+    function getMinedBalance(address user) external view returns (uint256) {
+        return minedBalance[user];
+    }
+
+    /// @notice Sisa yang dibutuhkan untuk bisa withdraw
+    function amountNeededToWithdraw(address user) external view returns (uint256) {
+        uint256 bal = minedBalance[user];
+        if (bal >= MIN_CLAIM_AMOUNT) return 0;
+        return MIN_CLAIM_AMOUNT - bal;
+    }
+
     // ============ MINING ============
     function startMining(bytes32 clientSeed) external nonReentrant whenNotPaused {
-        // Jika fee aktif, user harus authorized
         if (minerFeeEnabled) {
             require(authorizedMiners[msg.sender], "Miner belum terdaftar, bayar fee dulu");
         }
@@ -173,6 +196,10 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         emit MiningStarted(msg.sender, block.timestamp, challenge);
     }
 
+    /**
+     * @notice Claim reward mining → masuk ke minedBalance (belum ke wallet)
+     * @dev User harus withdraw via claimToWallet() setelah mencapai 20 LUX
+     */
     function claim(uint256 nonce) external nonReentrant whenNotPaused {
         Session storage s = sessions[msg.sender];
         require(s.active, "Belum mulai mining");
@@ -192,8 +219,29 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         totalMined += reward;
         totalClaims++;
 
-        _mint(msg.sender, reward);
+        // Mint ke kontrak dulu, lalu catat di minedBalance user
+        _mint(address(this), reward);
+        minedBalance[msg.sender] += reward;
+        totalPendingClaims += reward;
+
         emit MiningClaimed(msg.sender, reward, currentEpoch());
+        emit MinedAccumulated(msg.sender, reward, minedBalance[msg.sender]);
+    }
+
+    /**
+     * @notice Withdraw saldo mined ke wallet
+     * @dev Minimal 20 LUX. Transfer dari kontrak ke user.
+     */
+    function claimToWallet() external nonReentrant whenNotPaused {
+        uint256 balance = minedBalance[msg.sender];
+        require(balance >= MIN_CLAIM_AMOUNT, "Minimal 20 LUX untuk withdraw");
+
+        minedBalance[msg.sender] = 0;
+        totalPendingClaims -= balance;
+
+        _transfer(address(this), msg.sender, balance);
+
+        emit WithdrawnToWallet(msg.sender, balance);
     }
 
     function cancelMining() external nonReentrant {
@@ -208,29 +256,17 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
 
     // ============ FEE MINER MANAGEMENT ============
 
-    /**
-     * @notice Set nominal fee untuk add miner baru
-     * @param newFee Nominal fee dalam wei (native token)
-     */
     function setMinerFee(uint256 newFee) external onlyOwner {
         uint256 oldFee = minerFee;
         minerFee = newFee;
         emit MinerFeeUpdated(oldFee, newFee);
     }
 
-    /**
-     * @notice Toggle on/off fee miner
-     * @param enabled true = wajib bayar fee, false = bebas
-     */
     function setMinerFeeEnabled(bool enabled) external onlyOwner {
         minerFeeEnabled = enabled;
         emit MinerFeeEnabledUpdated(enabled);
     }
 
-    /**
-     * @notice Set penerima fee
-     * @param newRecipient Address penerima fee
-     */
     function setFeeRecipient(address newRecipient) external onlyOwner {
         require(newRecipient != address(0), "Recipient 0");
         address oldRecipient = feeRecipient;
@@ -238,11 +274,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         emit FeeRecipientUpdated(oldRecipient, newRecipient);
     }
 
-    /**
-     * @notice Tambah miner baru dengan bayar fee
-     * @dev Jika minerFeeEnabled == false, fee = 0 (gratis)
-     *      Jika minerFee == 0, juga gratis
-     */
     function addMiner(address miner) external payable nonReentrant whenNotPaused {
         require(miner != address(0), "Miner address 0");
         require(!authorizedMiners[miner], "Miner sudah terdaftar");
@@ -257,7 +288,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
             accumulatedFees += msg.value;
         }
 
-        // Refund kelebihan
         if (msg.value > requiredFee) {
             uint256 refund = msg.value - requiredFee;
             (bool ok, ) = msg.sender.call{value: refund}("");
@@ -267,10 +297,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         emit MinerAdded(miner, requiredFee, msg.sender);
     }
 
-    /**
-     * @notice Tambah banyak miner sekaligus
-     * @dev Fee dihitung per miner
-     */
     function addMinerBatch(address[] calldata miners) external payable nonReentrant whenNotPaused {
         uint256 len = miners.length;
         require(len > 0, "Array kosong");
@@ -296,7 +322,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
             accumulatedFees += used;
         }
 
-        // Refund kelebihan
         if (msg.value > used) {
             uint256 refund = msg.value - used;
             (bool ok, ) = msg.sender.call{value: refund}("");
@@ -304,10 +329,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         }
     }
 
-    /**
-     * @notice Hapus miner dari whitelist
-     * @dev Tidak refund fee. Owner only.
-     */
     function removeMiner(address miner) external onlyOwner {
         require(authorizedMiners[miner], "Miner tidak terdaftar");
         authorizedMiners[miner] = false;
@@ -317,9 +338,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         emit MinerRemoved(miner);
     }
 
-    /**
-     * @notice Withdraw fee yang terkumpul ke feeRecipient
-     */
     function withdrawFees() external nonReentrant {
         uint256 amount = accumulatedFees;
         require(amount > 0, "Tidak ada fee");
@@ -332,9 +350,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         emit FeesWithdrawn(to, amount);
     }
 
-    /**
-     * @notice Withdraw fee ke address tertentu (owner only)
-     */
     function withdrawFeesTo(address to) external onlyOwner nonReentrant {
         require(to != address(0), "To address 0");
         uint256 amount = accumulatedFees;
@@ -351,13 +366,18 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     receive() external payable {}
 
     // ============ RESCUE ============
+    /**
+     * @notice Rescue token yang salah kirim
+     * @dev Rescue LUX hanya bisa ambil saldo di luar totalPendingClaims
+     */
     function createRescue(address token, uint256 amount) external onlyOwner returns (bytes32) {
         require(amount > 0, "Amount 0");
 
         if (token == address(0)) {
             require(amount <= address(this).balance, "Saldo POL kurang");
         } else if (token == address(this)) {
-            require(amount <= balanceOf(address(this)), "Saldo LUX kurang");
+            uint256 availableLUX = balanceOf(address(this)) - totalPendingClaims;
+            require(amount <= availableLUX, "Saldo LUX kurang (pending claims)");
         } else {
             require(IERC20(token).balanceOf(address(this)) >= amount, "Saldo ERC-20 kurang");
         }
@@ -390,6 +410,8 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
             (bool ok, ) = ownerAddr.call{value: r.amount}("");
             require(ok, "Transfer POL gagal");
         } else if (r.token == address(this)) {
+            uint256 availableLUX = balanceOf(address(this)) - totalPendingClaims;
+            require(r.amount <= availableLUX, "Saldo LUX kurang (pending claims)");
             _transfer(address(this), ownerAddr, r.amount);
         } else {
             IERC20(r.token).safeTransfer(ownerAddr, r.amount);
@@ -434,5 +456,12 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
 
     function getLUXBalance() external view returns (uint256) {
         return balanceOf(address(this));
+    }
+
+    /// @notice Saldo LUX di kontrak yang tersedia untuk rescue (di luar pending claims)
+    function getAvailableLUXForRescue() external view returns (uint256) {
+        uint256 balance = balanceOf(address(this));
+        if (balance <= totalPendingClaims) return 0;
+        return balance - totalPendingClaims;
     }
 }
