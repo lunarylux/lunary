@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunary (LUX) — Mining</title>
+<link rel="icon" type="image/png" href="https://lunary.xyz/asset/lunary.png">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-1: #0a0a1a; --bg-2: #1a1a3a;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --primary: #a78bfa; --secondary: #60a5fa;
+    --gold: #fbbf24; --gold-2: #f59e0b;
+    --danger: #ef4444; --success: #34d399;
+    --text: #fff; --muted: #888;
+  }
+  html, body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-1); color: var(--text);
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,0.18), transparent 60%),
+      radial-gradient(1000px 700px at 100% 100%, rgba(96,165,250,0.15), transparent 60%),
+      linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    z-index: -2;
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 80% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff, transparent),
+      radial-gradient(1px 1px at 60% 10%, #fff, transparent),
+      radial-gradient(1px 1px at 25% 85%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 90% 75%, #fff, transparent);
+    opacity: 0.35; z-index: -1;
+    animation: twinkle 8s infinite alternate;
+  }
+  @keyframes twinkle { from{opacity:.2} to{opacity:.5} }
+  .container { max-width: 520px; width: 100%; margin: 0 auto; padding: 28px 20px 60px; }
+  .header { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
+  .logo-wrap { position: relative; width: 96px; height: 96px; margin-bottom: 14px; }
+  .logo-wrap::before {
+    content: ''; position: absolute; inset: -6px; border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--primary), var(--secondary), var(--primary));
+    filter: blur(14px); opacity: 0.55; animation: spin 8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .logo {
+    position: relative; width: 96px; height: 96px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+    object-fit: cover; display: block;
+  }
+  .logo-fallback {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 44px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a2a4a, #0a0a1a);
+  }
+  h1 {
+    font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .tagline {
+    font-size: 12px; color: var(--muted); margin-top: 4px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 18px; padding: 18px 20px; margin-bottom: 14px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 14px;
+  }
+  .row + .row { border-top: 1px solid rgba(255,255,255,0.04); }
+  .label { color: var(--muted); }
+  .value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .value.gold {
+    background: linear-gradient(90deg, var(--gold), var(--gold-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .timer-card { text-align: center; padding: 26px 20px; }
+  #timer {
+    font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px; min-height: 52px;
+  }
+  #timerLabel {
+    font-size: 11px; color: var(--muted); letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .progress-wrap {
+    margin-top: 16px; height: 6px; background: rgba(255,255,255,0.06);
+    border-radius: 100px; overflow: hidden;
+  }
+  #progressBar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 100px; transition: width 0.5s ease;
+    box-shadow: 0 0 12px rgba(167,139,250,0.6);
+  }
+  .pow-info {
+    font-size: 11px; color: var(--muted); margin-top: 10px;
+    font-variant-numeric: tabular-nums; min-height: 16px;
+  }
+  button {
+    width: 100%; padding: 16px; font-size: 15px; font-weight: 700;
+    border-radius: 14px; border: none; cursor: pointer; margin-bottom: 10px;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.3s;
+    font-family: inherit; letter-spacing: 0.3px;
+  }
+  button:not(:disabled):hover { transform: translateY(-1px); }
+  button:disabled { cursor: not-allowed; }
+  #connectBtn {
+    background: rgba(255,255,255,0.08); color: #fff;
+    border: 1px solid rgba(255,255,255,0.1); margin-bottom: 16px;
+  }
+  #startBtn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; box-shadow: 0 6px 20px rgba(167,139,250,0.35);
+  }
+  #startBtn:disabled {
+    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
+  }
+  #claimBtn {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #1a1a2e; box-shadow: 0 6px 20px rgba(251,191,36,0.3);
+  }
+  #claimBtn:disabled {
+    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
+  }
+  #status {
+    text-align: center; font-size: 13px; color: #bbb;
+    padding: 14px; background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px; margin-top: 4px;
+    transition: color 0.3s; word-break: break-word; line-height: 1.5;
+  }
+  #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
+  #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  #status.info { color: var(--secondary); border-color: rgba(96,165,250,0.3); }
+  .footer { text-align: center; font-size: 11px; color: #555; margin-top: 24px; }
+  .footer a { color: var(--primary); text-decoration: none; }
+  .hidden { display: none !important; }
+  .network-warn {
+    text-align: center; font-size: 12px; color: #fbbf24;
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 10px; padding: 10px; margin-bottom: 12px;
+  }
+  .network-warn button {
+    margin-top: 8px; margin-bottom: 0; padding: 10px 14px;
+    font-size: 13px; width: auto; display: inline-block;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #1a1a2e;
+  }
+  @media (max-width: 400px) {
+    #timer { font-size: 36px; }
+    h1 { font-size: 26px; }
+    .logo, .logo-wrap { width: 80px; height: 80px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo-wrap">
+      <div class="logo-fallback">🌙</div>
+      <img id="logo" class="logo" src="https://lunary.xyz/asset/lunary.png"
+           alt="Lunary Logo" onerror="this.style.display='none';" />
+    </div>
+    <h1>Lunary</h1>
+    <div class="tagline">LUX · PoW Mining · 4× Halving</div>
+  </div>
+
+  <div id="networkWarn" class="network-warn hidden">
+    ⚠️ Jaringan salah. Silakan switch ke <b>Sepolia Testnet</b>.
+    <br>
+    <button id="switchNetBtn">🔁 Switch ke Sepolia</button>
+  </div>
+
+  <button id="connectBtn">🔌 Connect Wallet</button>
+
+  <!-- STATS -->
+  <div class="card hidden" id="statsCard">
+    <div class="row">
+      <span class="label">Wallet</span>
+      <span class="value" id="wallet">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Reward saat ini</span>
+      <span class="value gold" id="reward">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Epoch</span>
+      <span class="value" id="epoch">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Total mined</span>
+      <span class="value" id="mined">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Max supply</span>
+      <span class="value" id="maxSupply">-</span>
+    </div>
+    <div class="row" id="feeRow">
+      <span class="label">Entry fee (address baru)</span>
+      <span class="value" id="feeInfo">-</span>
+    </div>
+  </div>
+
+  <!-- MINING -->
+  <div class="card timer-card hidden" id="miningCard">
+    <div id="timer">--:--:--</div>
+    <div id="timerLabel">Waktu mining</div>
+
+    <div class="progress-wrap">
+      <div id="progressBar"></div>
+    </div>
+    <div class="pow-info" id="powProgress">PoW: idle</div>
+
+    <div style="margin-top:20px;">
+      <button id="startBtn" disabled>▶️ Mulai Mining</button>
+      <button id="claimBtn" disabled>💰 Claim Reward</button>
+    </div>
+  </div>
+
+  <div id="status">Belum connect</div>
+
+  <div class="footer">
+    © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+<script>
+// ==================================================
+// KONFIGURASI
+// ==================================================
+const CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
+const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
+const SEPOLIA_CHAIN_ID_DEC = 11155111;
+
+// ABI versi BARU (final)
+const ABI_NEW = [
+  "function getServerTime() view returns (uint256)",
+  "function getMiningConfig() view returns (uint256 miningDuration, uint256 difficulty, uint256 maxNonce, bool feeEnabled, uint256 feeAmount)",
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MAX_NONCE() view returns (uint256)",
+  "function entryFeeEnabled() view returns (bool)",
+  "function entryFee() view returns (uint256)",
+  "function hasMinedBefore(address) view returns (bool)",
+  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
+  "function canClaim(address) view returns (bool)",
+  "function timeRemaining(address) view returns (uint256)",
+  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
+  "function balanceOf(address) view returns (uint256)",
+  "function startMining(bytes32 secret, bytes32 clientSeed) payable",
+  "function claim(uint256 nonce)",
+  "function cancelMining()",
+  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge, uint256 endsAt)",
+  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)"
+];
+
+// ABI versi LAMA (fallback)
+const ABI_OLD = [
+  "function getServerTime() view returns (uint256)",
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MAX_NONCE() view returns (uint256)",
+  "function entryFeeEnabled() view returns (bool)",
+  "function entryFee() view returns (uint256)",
+  "function hasMinedBefore(address) view returns (bool)",
+  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
+  "function canClaim(address) view returns (bool)",
+  "function timeRemaining(address) view returns (uint256)",
+  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
+  "function commitMining(bytes32 commitHash)",
+  "function startMining(bytes32 secret) payable",
+  "function claim(uint256 nonce)",
+  "function cancelMining()",
+  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge, uint256 endsAt)",
+  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)"
+];
+
+// ==================================================
+// STATE
+// ==================================================
+let provider, signer, contract, userAddress;
+let contractVersion = "new";
+let timerInterval = null;
+let foundNonce = null;
+let powRunning = false;
+let cachedConfig = {
+  miningDuration: 14400,
+  difficulty: 100000000n,
+  maxNonce: 5000000n,
+  feeEnabled: true,
+  feeAmount: 0n
+};
+let cachedChallenge = null;
+let isWorking = false;
+let isConnecting = false;
+
+const $ = (id) => document.getElementById(id);
+
+// ==================================================
+// HELPERS
+// ==================================================
+function shortAddr(a) {
+  if (!a) return "—";
+  return a.slice(0, 6) + "..." + a.slice(-4);
+}
+function p2(n) { return String(n).padStart(2, "0"); }
+function fmtLUX(v) {
+  try {
+    const s = ethers.utils.formatUnits(v, 8);
+    const n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toLocaleString("id-ID", { maximumFractionDigits: 8 });
+  } catch { return v.toString(); }
+}
+function setStatus(msg, type = "") {
+  const el = $("status");
+  el.innerText = msg;
+  el.className = type;
+}
+function setProgress(pct) {
+  $("progressBar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+}
+function setPowInfo(msg) { $("powProgress").innerText = msg; }
+
+function decodeError(e) {
+  if (!e) return "Unknown error";
+  if (typeof e === "string") return e;
+  if (e.reason) return e.reason;
+  const data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
+  if (typeof data === "string" && data.startsWith("0x08c379a0")) {
+    try { return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0]; } catch {}
+  }
+  if (e.message) return e.message;
+  if (e.error && e.error.message) return e.error.message;
+  return "Transaction reverted (no reason)";
+}
+
+// ==================================================
+// SWITCH / ADD SEPOLIA
+// ==================================================
+async function ensureSepolia() {
+  if (!window.ethereum) throw new Error("MetaMask tidak terdeteksi");
+  const current = await window.ethereum.request({ method: "eth_chainId" });
+  if (current.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }],
+    });
+  } catch (err) {
+    if (err.code === 4902 || err.code === -32603) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: SEPOLIA_CHAIN_ID_HEX,
+            chainName: "Sepolia Testnet",
+            nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://rpc.sepolia.org", "https://sepolia.drpc.org"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"],
+          }],
+        });
+      } catch (addErr) {
+        if (addErr.code === 4001) throw new Error("Kamu menolak menambahkan Sepolia");
+        throw new Error("Gagal tambah Sepolia: " + (addErr.message || addErr));
+      }
+    } else if (err.code === 4001) {
+      throw new Error("Kamu menolak switch ke Sepolia");
+    } else {
+      throw new Error("Gagal switch: " + (err.message || err));
+    }
+  }
+
+  const start = Date.now();
+  while (Date.now() - start < 5000) {
+    const c = await window.ethereum.request({ method: "eth_chainId" });
+    if (c.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  throw new Error("Timeout: MetaMask tidak pindah ke Sepolia");
+}
+
+// ==================================================
+// DETEKSI VERSI KONTRAK
+// ==================================================
+async function detectContractVersion(prov) {
+  const code = await prov.getCode(CONTRACT_ADDRESS);
+  if (!code || code === "0x") {
+    throw new Error("Tidak ada kontrak di alamat " + CONTRACT_ADDRESS + " di Sepolia");
+  }
+  const ifaceNew = new ethers.utils.Interface(ABI_NEW);
+  const data = ifaceNew.encodeFunctionData("getMiningConfig", []);
+  try {
+    const result = await prov.call({ to: CONTRACT_ADDRESS, data });
+    if (result && result.length > 2) return "new";
+  } catch {}
+  return "old";
+}
+
+// ==================================================
+// CONNECT CORE
+// ==================================================
+async function doConnect() {
+  if (isConnecting) return;
+  isConnecting = true;
+  try {
+    if (!window.ethereum) {
+      setStatus("❌ Install MetaMask dulu!", "error");
+      return;
+    }
+
+    setStatus("🔓 Meminta akses akun...", "info");
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    if (!accounts || accounts.length === 0) {
+      setStatus("❌ Tidak ada akun", "error");
+      return;
+    }
+    userAddress = accounts[0];
+
+    // cek chain
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Bukan Sepolia. Klik tombol switch di atas.", "error");
+      return;
+    }
+    $("networkWarn").classList.add("hidden");
+
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    signer = provider.getSigner();
+
+    setStatus("🔍 Memeriksa kontrak...", "info");
+    contractVersion = await detectContractVersion(provider);
+    const abi = contractVersion === "new" ? ABI_NEW : ABI_OLD;
+    contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+
+    $("wallet").innerText = shortAddr(userAddress);
+    $("connectBtn").style.display = "none";
+    $("statsCard").classList.remove("hidden");
+    $("miningCard").classList.remove("hidden");
+    setStatus("✅ Connected", "success");
+
+    await loadConfig();
+    await updateUI();
+
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+
+  } catch (e) {
+    console.error("Connect error:", e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isConnecting = false;
+  }
+}
+
+// ==================================================
+// TOMBOL
+// ==================================================
+$("connectBtn").onclick = doConnect;
+$("switchNetBtn").onclick = async () => {
+  try {
+    setStatus("⏳ Switch ke Sepolia...", "info");
+    await ensureSepolia();
+    await doConnect();
+  } catch (e) {
+    setStatus("❌ " + decodeError(e), "error");
+  }
+};
+
+// ==================================================
+// LOAD CONFIG
+// ==================================================
+async function loadConfig() {
+  try {
+    let md = 14400, diff = 100000000n, maxN = 5000000n;
+    let feeEnabled = true, feeAmount = ethers.BigNumber.from(0);
+
+    if (contractVersion === "new") {
+      try {
+        const cfg = await contract.getMiningConfig();
+        md = Number(cfg.miningDuration);
+        diff = BigInt(cfg.difficulty.toString());
+        maxN = BigInt(cfg.maxNonce.toString());
+        feeEnabled = cfg.feeEnabled;
+        feeAmount = cfg.feeAmount;
+      } catch {}
+    }
+
+    if (contractVersion === "old" || md === 14400) {
+      try { md = Number(await contract.MINING_DURATION()); } catch {}
+      try { diff = BigInt((await contract.DIFFICULTY()).toString()); } catch {}
+      try { maxN = BigInt((await contract.MAX_NONCE()).toString()); } catch {}
+    }
+
+    if (contractVersion === "old") {
+      try {
+        const fi = await contract.getEntryFeeInfo();
+        feeEnabled = fi.enabled;
+        feeAmount = fi.amount;
+      } catch {
+        try { feeEnabled = await contract.entryFeeEnabled(); } catch {}
+        try { feeAmount = await contract.entryFee(); } catch {}
+      }
+    }
+
+    cachedConfig = { miningDuration: md, difficulty: diff, maxNonce: maxN, feeEnabled, feeAmount };
+
+    const hasMined = await contract.hasMinedBefore(userAddress);
+    if (feeEnabled && !hasMined) {
+      $("feeRow").classList.remove("hidden");
+      $("feeInfo").innerText = ethers.utils.formatEther(feeAmount) + " ETH";
+    } else {
+      $("feeRow").classList.add("hidden");
+    }
+  } catch (e) {
+    console.error("loadConfig error:", e);
+  }
+}
+
+// ==================================================
+// UPDATE UI
+// ==================================================
+async function updateUI() {
+  if (!contract || !userAddress) return;
+  try {
+    const [reward, epoch, mined, maxSupply, session] = await Promise.all([
+      contract.currentReward(),
+      contract.currentEpoch(),
+      contract.totalMined(),
+      contract.MAX_SUPPLY(),
+      contract.sessions(userAddress),
+    ]);
+
+    $("reward").innerText = fmtLUX(reward) + " LUX";
+    $("epoch").innerText = epoch.toString();
+    $("mined").innerText = fmtLUX(mined) + " LUX";
+    $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
+
+    const startBtn = $("startBtn");
+    const claimBtn = $("claimBtn");
+
+    if (!session.active && !session.claimed) {
+      // IDLE
+      startBtn.disabled = false;
+      startBtn.innerText = "▶️ Mulai Mining";
+      claimBtn.disabled = true;
+      $("timer").innerText = "--:--:--";
+      $("timerLabel").innerText = "Siap memulai";
+      setProgress(0);
+      setPowInfo("PoW: idle");
+      foundNonce = null;
+      cachedChallenge = null;
+    } else if (session.active && !session.claimed) {
+      // MINING
+      cachedChallenge = session.challenge;
+      const canClaimNow = await contract.canClaim(userAddress);
+
+      if (canClaimNow) {
+        startBtn.disabled = true;
+        startBtn.innerText = "⛏️ Mining berjalan...";
+        claimBtn.disabled = foundNonce === null;
+        $("timer").innerText = "✅ Siap Claim";
+        $("timerLabel").innerText = foundNonce === null
+          ? "Menunggu PoW selesai..."
+          : "Klik tombol Claim";
+        setProgress(100);
+      } else {
+        startBtn.disabled = true;
+        startBtn.innerText = "⛏️ Mining berjalan...";
+        claimBtn.disabled = true;
+        $("timerLabel").innerText = "Sisa waktu mining";
+        if (foundNonce === null && !powRunning) {
+          setPowInfo("PoW: memulai...");
+          startPoW(session.challenge);
+        }
+      }
+    } else {
+      // CLAIMED
+      startBtn.disabled = false;
+      startBtn.innerText = "🔄 Mulai Mining Lagi";
+      claimBtn.disabled = true;
+      $("timer").innerText = "✅ Selesai";
+      $("timerLabel").innerText = "Klik Start untuk siklus berikutnya";
+      setProgress(100);
+    }
+  } catch (e) {
+    console.error("updateUI error:", e);
+  }
+}
+
+// ==================================================
+// TIMER
+// ==================================================
+async function updateTimer() {
+  if (!contract || !userAddress) return;
+  try {
+    const session = await contract.sessions(userAddress);
+    if (!session.active || session.claimed) return;
+
+    const remaining = await contract.timeRemaining(userAddress);
+    const sec = Number(remaining);
+
+    if (sec <= 0) {
+      $("timer").innerText = "✅ Siap Claim";
+      $("timerLabel").innerText = foundNonce === null
+        ? "Menunggu PoW selesai..."
+        : "Klik tombol Claim di bawah";
+      setProgress(100);
+      if (foundNonce !== null) $("claimBtn").disabled = false;
+      return;
+    }
+
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    $("timer").innerText = `${p2(h)}:${p2(m)}:${p2(s)}`;
+
+    const elapsed = cachedConfig.miningDuration - sec;
+    setProgress((elapsed / cachedConfig.miningDuration) * 100);
+  } catch (e) {
+    console.error("updateTimer error:", e);
+  }
+}
+
+// ==================================================
+// PoW BRUTE FORCE (chunked, tidak freeze UI)
+// ==================================================
+function startPoW(challenge) {
+  if (powRunning || foundNonce !== null) return;
+  powRunning = true;
+
+  const target = ((1n << 256n) - 1n) / cachedConfig.difficulty;
+  const maxNonce = cachedConfig.maxNonce;
+  const batch = 300;
+  let nonce = 0n;
+  let hashCount = 0;
+  const startTime = Date.now();
+
+  function tick() {
+    if (foundNonce !== null) { powRunning = false; return; }
+
+    for (let i = 0; i < batch; i++) {
+      if (nonce > maxNonce) {
+        setPowInfo("❌ Nonce habis. Cancel & start ulang.");
+        powRunning = false;
+        return;
+      }
+      const hash = ethers.utils.solidityKeccak256(
+        ["bytes32", "address", "uint256"],
+        [challenge, userAddress, nonce.toString()]
+      );
+      hashCount++;
+      if (BigInt(hash) < target) {
+        foundNonce = Number(nonce);
+        setPowInfo(`✅ PoW selesai! Nonce: ${nonce.toString()}`);
+        $("claimBtn").disabled = false;
+        powRunning = false;
+        return;
+      }
+      nonce++;
+    }
+
+    const elapsed = (Date.now() - startTime) / 1000;
+    const rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
+    setPowInfo(
+      `PoW: ${hashCount.toLocaleString("id-ID")} hash · ${rate.toLocaleString("id-ID")} H/s · nonce ${nonce.toString()}`
+    );
+    setTimeout(tick, 0);
+  }
+  tick();
+}
+
+// ==================================================
+// START MINING
+// ==================================================
+$("startBtn").onclick = async () => {
+  if (isWorking) return;
+  isWorking = true;
+  try {
+    setStatus("⏳ Memulai mining...", "info");
+    foundNonce = null;
+    powRunning = false;
+    setPowInfo("PoW: idle");
+    setProgress(0);
+
+    // cek fee
+    const hasMined = await contract.hasMinedBefore(userAddress);
+    let feeEnabled = cachedConfig.feeEnabled;
+    let feeAmount = cachedConfig.feeAmount;
+    try {
+      const fi = await contract.getEntryFeeInfo();
+      feeEnabled = fi.enabled;
+      feeAmount = fi.amount;
+    } catch {}
+
+    const needFee = feeEnabled && !hasMined;
+    const value = needFee ? feeAmount : ethers.BigNumber.from(0);
+
+    let tx;
+
+    if (contractVersion === "new") {
+      // ===== VERSI BARU =====
+      const secret = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+      const clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+      if (needFee) {
+        setStatus(`⏳ Bayar entry fee ${ethers.utils.formatEther(feeAmount)} ETH...`, "info");
+      }
+
+      try {
+        await contract.estimateGas.startMining(secret, clientSeed, { value });
+      } catch (estErr) {
+        throw new Error("Estimasi gas gagal: " + decodeError(estErr));
+      }
+
+      tx = await contract.startMining(secret, clientSeed, { value });
+    } else {
+      // ===== VERSI LAMA =====
+      const secret = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+      const commitHash = ethers.utils.solidityKeccak256(
+        ["bytes32", "address"],
+        [secret, userAddress]
+      );
+
+      setStatus("⏳ Commit (tx 1/2)...", "info");
+      const tx1 = await contract.commitMining(commitHash);
+      await tx1.wait();
+
+      setStatus("⏳ Tunggu 1 menit commit delay...", "info");
+      await new Promise(r => setTimeout(r, 62000));
+
+      setStatus("⏳ Start mining (tx 2/2)...", "info");
+      tx = await contract.startMining(secret, { value });
+    }
+
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    const receipt = await tx.wait();
+
+    // ambil challenge dari event
+    let challenge = null;
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        if (parsed.name === "MiningStarted") {
+          challenge = parsed.args.challenge;
+          break;
+        }
+      } catch {}
+    }
+    if (!challenge) {
+      const session = await contract.sessions(userAddress);
+      challenge = session.challenge;
+    }
+
+    cachedChallenge = challenge;
+    setStatus("✅ Mining dimulai! Tunggu timer selesai.", "success");
+
+    await loadConfig();
+    await updateUI();
+
+    setPowInfo("PoW: memulai...");
+    startPoW(challenge);
+
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// CLAIM
+// ==================================================
+$("claimBtn").onclick = async () => {
+  if (isWorking) return;
+  if (foundNonce === null) {
+    setStatus("⏳ Menunggu PoW selesai...", "error");
+    return;
+  }
+  isWorking = true;
+  try {
+    setStatus("⏳ Claim...", "info");
+
+    try {
+      await contract.estimateGas.claim(foundNonce);
+    } catch (estErr) {
+      throw new Error("Estimasi gas gagal: " + decodeError(estErr));
+    }
+
+    const tx = await contract.claim(foundNonce);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus("🎉 Berhasil claim LUX! Klik Start untuk siklus berikutnya.", "success");
+    foundNonce = null;
+    powRunning = false;
+    cachedChallenge = null;
+    setPowInfo("PoW: idle");
+    setProgress(0);
+
+    await updateUI();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// EVENT LISTENER (sekali)
+// ==================================================
+if (window.ethereum && !window.__luxListenersBound) {
+  window.__luxListenersBound = true;
+
+  window.ethereum.on("accountsChanged", (accs) => {
+    if (!accs || accs.length === 0) {
+      setStatus("🔒 Wallet disconnected", "error");
+      $("connectBtn").style.display = "block";
+      $("statsCard").classList.add("hidden");
+      $("miningCard").classList.add("hidden");
+      return;
+    }
+    doConnect();
+  });
+
+  window.ethereum.on("chainChanged", (hex) => {
+    const id = parseInt(hex, 16);
+    if (id === SEPOLIA_CHAIN_ID_DEC) {
+      doConnect();
+    } else {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Pindah dari Sepolia. Switch kembali.", "error");
+    }
+  });
+}
+
+// ==================================================
+// AUTO RECONNECT
+// ==================================================
+window.addEventListener("load", async () => {
+  if (!window.ethereum) {
+    setStatus("Belum connect · Install MetaMask");
+    return;
+  }
+  try {
+    const accs = await window.ethereum.request({ method: "eth_accounts" });
+    const chain = await window.ethereum.request({ method: "eth_chainId" });
+
+    if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Jaringan salah. Klik tombol switch di atas.", "error");
+      if (accs && accs.length > 0) userAddress = accs[0];
+      return;
+    }
+
+    if (accs && accs.length > 0) {
+      doConnect();
+    } else {
+      setStatus("Belum connect");
+    }
+  } catch {
+    setStatus("Belum connect");
+  }
+});
+</script>
+</body>
+</html>
