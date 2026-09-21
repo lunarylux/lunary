@@ -203,6 +203,10 @@
       <span class="value" id="wallet">-</span>
     </div>
     <div class="row">
+      <span class="label">Saldo LUX</span>
+      <span class="value gold" id="luxBal">-</span>
+    </div>
+    <div class="row">
       <span class="label">Reward saat ini</span>
       <span class="value gold" id="reward">-</span>
     </div>
@@ -217,10 +221,6 @@
     <div class="row">
       <span class="label">Max supply</span>
       <span class="value" id="maxSupply">-</span>
-    </div>
-    <div class="row" id="feeRow">
-      <span class="label">Entry fee (address baru)</span>
-      <span class="value" id="feeInfo">-</span>
     </div>
   </div>
 
@@ -255,74 +255,57 @@
 const CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
 const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
 const SEPOLIA_CHAIN_ID_DEC = 11155111;
+const MINING_DURATION = 4 * 3600; // detik (4 jam)
 
-// ABI versi BARU (final)
-const ABI_NEW = [
-  "function getServerTime() view returns (uint256)",
-  "function getMiningConfig() view returns (uint256 miningDuration, uint256 difficulty, uint256 maxNonce, bool feeEnabled, uint256 feeAmount)",
-  "function currentReward() view returns (uint256)",
-  "function currentEpoch() view returns (uint256)",
-  "function totalMined() view returns (uint256)",
-  "function MAX_SUPPLY() view returns (uint256)",
-  "function MINING_DURATION() view returns (uint256)",
-  "function DIFFICULTY() view returns (uint256)",
-  "function MAX_NONCE() view returns (uint256)",
-  "function entryFeeEnabled() view returns (bool)",
-  "function entryFee() view returns (uint256)",
-  "function hasMinedBefore(address) view returns (bool)",
-  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
-  "function canClaim(address) view returns (bool)",
-  "function timeRemaining(address) view returns (uint256)",
-  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
+// ==================================================
+// ABI — SESUAI KONTRAK ASLI
+// ==================================================
+const ABI = [
+  // ===== TOKEN =====
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
   "function balanceOf(address) view returns (uint256)",
-  "function startMining(bytes32 secret, bytes32 clientSeed) payable",
+  "function MAX_SUPPLY() view returns (uint256)",
+
+  // ===== MINING =====
+  "function startMining(bytes32 clientSeed)",
   "function claim(uint256 nonce)",
   "function cancelMining()",
-  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge, uint256 endsAt)",
-  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)"
-];
 
-// ABI versi LAMA (fallback)
-const ABI_OLD = [
-  "function getServerTime() view returns (uint256)",
-  "function currentReward() view returns (uint256)",
-  "function currentEpoch() view returns (uint256)",
-  "function totalMined() view returns (uint256)",
-  "function MAX_SUPPLY() view returns (uint256)",
-  "function MINING_DURATION() view returns (uint256)",
-  "function DIFFICULTY() view returns (uint256)",
-  "function MAX_NONCE() view returns (uint256)",
-  "function entryFeeEnabled() view returns (bool)",
-  "function entryFee() view returns (uint256)",
-  "function hasMinedBefore(address) view returns (bool)",
+  // ===== VIEW MINING =====
   "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
   "function canClaim(address) view returns (bool)",
   "function timeRemaining(address) view returns (uint256)",
-  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
-  "function commitMining(bytes32 commitHash)",
-  "function startMining(bytes32 secret) payable",
-  "function claim(uint256 nonce)",
-  "function cancelMining()",
-  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge, uint256 endsAt)",
-  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)"
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function totalClaims() view returns (uint256)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
+  "function CLAIMS_PER_EPOCH() view returns (uint256)",
+  "function MAX_HALVINGS() view returns (uint256)",
+  "function TOKENS_PER_CLAIM() view returns (uint256)",
+  "function maxSupply() view returns (uint256)",
+  "function remainingMineable() view returns (uint256)",
+  "function currentDifficulty() view returns (uint256)",
+
+  // ===== EVENTS =====
+  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge)",
+  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)",
+  "event MiningCancelled(address indexed user)"
 ];
 
 // ==================================================
 // STATE
 // ==================================================
 let provider, signer, contract, userAddress;
-let contractVersion = "new";
 let timerInterval = null;
 let foundNonce = null;
 let powRunning = false;
-let cachedConfig = {
-  miningDuration: 14400,
-  difficulty: 100000000n,
-  maxNonce: 5000000n,
-  feeEnabled: true,
-  feeAmount: 0n
-};
 let cachedChallenge = null;
+let cachedDifficulty = 100000n;
 let isWorking = false;
 let isConnecting = false;
 
@@ -361,6 +344,10 @@ function decodeError(e) {
   const data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
   if (typeof data === "string" && data.startsWith("0x08c379a0")) {
     try { return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0]; } catch {}
+  }
+  if (typeof data === "string" && data.startsWith("0x4e487b71")) {
+    const code = parseInt(data.slice(10, 74), 16);
+    return `Panic 0x${code.toString(16)}`;
   }
   if (e.message) return e.message;
   if (e.error && e.error.message) return e.error.message;
@@ -414,23 +401,6 @@ async function ensureSepolia() {
 }
 
 // ==================================================
-// DETEKSI VERSI KONTRAK
-// ==================================================
-async function detectContractVersion(prov) {
-  const code = await prov.getCode(CONTRACT_ADDRESS);
-  if (!code || code === "0x") {
-    throw new Error("Tidak ada kontrak di alamat " + CONTRACT_ADDRESS + " di Sepolia");
-  }
-  const ifaceNew = new ethers.utils.Interface(ABI_NEW);
-  const data = ifaceNew.encodeFunctionData("getMiningConfig", []);
-  try {
-    const result = await prov.call({ to: CONTRACT_ADDRESS, data });
-    if (result && result.length > 2) return "new";
-  } catch {}
-  return "old";
-}
-
-// ==================================================
 // CONNECT CORE
 // ==================================================
 async function doConnect() {
@@ -461,11 +431,23 @@ async function doConnect() {
 
     provider = new ethers.providers.Web3Provider(window.ethereum, "any");
     signer = provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
+    // cek kontrak ada
     setStatus("🔍 Memeriksa kontrak...", "info");
-    contractVersion = await detectContractVersion(provider);
-    const abi = contractVersion === "new" ? ABI_NEW : ABI_OLD;
-    contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+    const code = await provider.getCode(CONTRACT_ADDRESS);
+    if (!code || code === "0x") {
+      setStatus("❌ Tidak ada kontrak di alamat " + CONTRACT_ADDRESS, "error");
+      return;
+    }
+
+    // ambil difficulty
+    try {
+      const d = await contract.DIFFICULTY();
+      cachedDifficulty = BigInt(d.toString());
+    } catch {
+      cachedDifficulty = 100000n;
+    }
 
     $("wallet").innerText = shortAddr(userAddress);
     $("connectBtn").style.display = "none";
@@ -473,7 +455,6 @@ async function doConnect() {
     $("miningCard").classList.remove("hidden");
     setStatus("✅ Connected", "success");
 
-    await loadConfig();
     await updateUI();
 
     if (timerInterval) clearInterval(timerInterval);
@@ -502,73 +483,25 @@ $("switchNetBtn").onclick = async () => {
 };
 
 // ==================================================
-// LOAD CONFIG
-// ==================================================
-async function loadConfig() {
-  try {
-    let md = 14400, diff = 100000000n, maxN = 5000000n;
-    let feeEnabled = true, feeAmount = ethers.BigNumber.from(0);
-
-    if (contractVersion === "new") {
-      try {
-        const cfg = await contract.getMiningConfig();
-        md = Number(cfg.miningDuration);
-        diff = BigInt(cfg.difficulty.toString());
-        maxN = BigInt(cfg.maxNonce.toString());
-        feeEnabled = cfg.feeEnabled;
-        feeAmount = cfg.feeAmount;
-      } catch {}
-    }
-
-    if (contractVersion === "old" || md === 14400) {
-      try { md = Number(await contract.MINING_DURATION()); } catch {}
-      try { diff = BigInt((await contract.DIFFICULTY()).toString()); } catch {}
-      try { maxN = BigInt((await contract.MAX_NONCE()).toString()); } catch {}
-    }
-
-    if (contractVersion === "old") {
-      try {
-        const fi = await contract.getEntryFeeInfo();
-        feeEnabled = fi.enabled;
-        feeAmount = fi.amount;
-      } catch {
-        try { feeEnabled = await contract.entryFeeEnabled(); } catch {}
-        try { feeAmount = await contract.entryFee(); } catch {}
-      }
-    }
-
-    cachedConfig = { miningDuration: md, difficulty: diff, maxNonce: maxN, feeEnabled, feeAmount };
-
-    const hasMined = await contract.hasMinedBefore(userAddress);
-    if (feeEnabled && !hasMined) {
-      $("feeRow").classList.remove("hidden");
-      $("feeInfo").innerText = ethers.utils.formatEther(feeAmount) + " ETH";
-    } else {
-      $("feeRow").classList.add("hidden");
-    }
-  } catch (e) {
-    console.error("loadConfig error:", e);
-  }
-}
-
-// ==================================================
 // UPDATE UI
 // ==================================================
 async function updateUI() {
   if (!contract || !userAddress) return;
   try {
-    const [reward, epoch, mined, maxSupply, session] = await Promise.all([
+    const [reward, epoch, mined, maxSupply, session, bal] = await Promise.all([
       contract.currentReward(),
       contract.currentEpoch(),
       contract.totalMined(),
       contract.MAX_SUPPLY(),
       contract.sessions(userAddress),
+      contract.balanceOf(userAddress),
     ]);
 
     $("reward").innerText = fmtLUX(reward) + " LUX";
     $("epoch").innerText = epoch.toString();
     $("mined").innerText = fmtLUX(mined) + " LUX";
     $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
+    $("luxBal").innerText = fmtLUX(bal) + " LUX";
 
     const startBtn = $("startBtn");
     const claimBtn = $("claimBtn");
@@ -609,7 +542,7 @@ async function updateUI() {
         }
       }
     } else {
-      // CLAIMED
+      // CLAIMED (transient)
       startBtn.disabled = false;
       startBtn.innerText = "🔄 Mulai Mining Lagi";
       claimBtn.disabled = true;
@@ -649,44 +582,41 @@ async function updateTimer() {
     const s = sec % 60;
     $("timer").innerText = `${p2(h)}:${p2(m)}:${p2(s)}`;
 
-    const elapsed = cachedConfig.miningDuration - sec;
-    setProgress((elapsed / cachedConfig.miningDuration) * 100);
+    const elapsed = MINING_DURATION - sec;
+    setProgress((elapsed / MINING_DURATION) * 100);
   } catch (e) {
     console.error("updateTimer error:", e);
   }
 }
 
 // ==================================================
-// PoW BRUTE FORCE (chunked, tidak freeze UI)
+// PoW BRUTE FORCE
 // ==================================================
 function startPoW(challenge) {
   if (powRunning || foundNonce !== null) return;
   powRunning = true;
 
-  const target = ((1n << 256n) - 1n) / cachedConfig.difficulty;
-  const maxNonce = cachedConfig.maxNonce;
-  const batch = 300;
-  let nonce = 0n;
+  // target = type(uint256).max / DIFFICULTY
+  const MAX_UINT = (1n << 256n) - 1n;
+  const target = MAX_UINT / cachedDifficulty;
+
+  let nonce = 0;
   let hashCount = 0;
   const startTime = Date.now();
+  const batch = 500;
 
   function tick() {
     if (foundNonce !== null) { powRunning = false; return; }
 
     for (let i = 0; i < batch; i++) {
-      if (nonce > maxNonce) {
-        setPowInfo("❌ Nonce habis. Cancel & start ulang.");
-        powRunning = false;
-        return;
-      }
       const hash = ethers.utils.solidityKeccak256(
         ["bytes32", "address", "uint256"],
-        [challenge, userAddress, nonce.toString()]
+        [challenge, userAddress, nonce]
       );
       hashCount++;
       if (BigInt(hash) < target) {
-        foundNonce = Number(nonce);
-        setPowInfo(`✅ PoW selesai! Nonce: ${nonce.toString()}`);
+        foundNonce = nonce;
+        setPowInfo(`✅ PoW selesai! Nonce: ${nonce.toLocaleString("id-ID")}`);
         $("claimBtn").disabled = false;
         powRunning = false;
         return;
@@ -697,7 +627,7 @@ function startPoW(challenge) {
     const elapsed = (Date.now() - startTime) / 1000;
     const rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
     setPowInfo(
-      `PoW: ${hashCount.toLocaleString("id-ID")} hash · ${rate.toLocaleString("id-ID")} H/s · nonce ${nonce.toString()}`
+      `PoW: ${hashCount.toLocaleString("id-ID")} hash · ${rate.toLocaleString("id-ID")} H/s · nonce ${nonce.toLocaleString("id-ID")}`
     );
     setTimeout(tick, 0);
   }
@@ -717,56 +647,18 @@ $("startBtn").onclick = async () => {
     setPowInfo("PoW: idle");
     setProgress(0);
 
-    // cek fee
-    const hasMined = await contract.hasMinedBefore(userAddress);
-    let feeEnabled = cachedConfig.feeEnabled;
-    let feeAmount = cachedConfig.feeAmount;
+    // generate clientSeed (bytes32 random)
+    const clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+    // estimasi gas dulu supaya revert reason jelas
     try {
-      const fi = await contract.getEntryFeeInfo();
-      feeEnabled = fi.enabled;
-      feeAmount = fi.amount;
-    } catch {}
-
-    const needFee = feeEnabled && !hasMined;
-    const value = needFee ? feeAmount : ethers.BigNumber.from(0);
-
-    let tx;
-
-    if (contractVersion === "new") {
-      // ===== VERSI BARU =====
-      const secret = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-
-      if (needFee) {
-        setStatus(`⏳ Bayar entry fee ${ethers.utils.formatEther(feeAmount)} ETH...`, "info");
-      }
-
-      try {
-        await contract.estimateGas.startMining(secret, clientSeed, { value });
-      } catch (estErr) {
-        throw new Error("Estimasi gas gagal: " + decodeError(estErr));
-      }
-
-      tx = await contract.startMining(secret, clientSeed, { value });
-    } else {
-      // ===== VERSI LAMA =====
-      const secret = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const commitHash = ethers.utils.solidityKeccak256(
-        ["bytes32", "address"],
-        [secret, userAddress]
-      );
-
-      setStatus("⏳ Commit (tx 1/2)...", "info");
-      const tx1 = await contract.commitMining(commitHash);
-      await tx1.wait();
-
-      setStatus("⏳ Tunggu 1 menit commit delay...", "info");
-      await new Promise(r => setTimeout(r, 62000));
-
-      setStatus("⏳ Start mining (tx 2/2)...", "info");
-      tx = await contract.startMining(secret, { value });
+      await contract.estimateGas.startMining(clientSeed);
+    } catch (estErr) {
+      throw new Error("Estimasi gas gagal: " + decodeError(estErr));
     }
 
+    setStatus("⏳ Kirim transaksi...", "info");
+    const tx = await contract.startMining(clientSeed);
     setStatus("⏳ Menunggu konfirmasi...", "info");
     const receipt = await tx.wait();
 
@@ -787,11 +679,11 @@ $("startBtn").onclick = async () => {
     }
 
     cachedChallenge = challenge;
-    setStatus("✅ Mining dimulai! Tunggu timer selesai.", "success");
+    setStatus("✅ Mining dimulai! Tunggu 4 jam.", "success");
 
-    await loadConfig();
     await updateUI();
 
+    // mulai PoW
     setPowInfo("PoW: memulai...");
     startPoW(challenge);
 
@@ -884,20 +776,3 @@ window.addEventListener("load", async () => {
 
     if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
       $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Jaringan salah. Klik tombol switch di atas.", "error");
-      if (accs && accs.length > 0) userAddress = accs[0];
-      return;
-    }
-
-    if (accs && accs.length > 0) {
-      doConnect();
-    } else {
-      setStatus("Belum connect");
-    }
-  } catch {
-    setStatus("Belum connect");
-  }
-});
-</script>
-</body>
-</html>
