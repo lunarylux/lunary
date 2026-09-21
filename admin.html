@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunary (LUX) — Admin Panel</title>
+<link rel="icon" type="image/png" href="https://lunary.xyz/asset/lunary.png">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-1: #0a0a1a;
+    --bg-2: #1a1a3a;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --primary: #a78bfa;
+    --secondary: #60a5fa;
+    --gold: #fbbf24;
+    --gold-2: #f59e0b;
+    --danger: #ef4444;
+    --success: #34d399;
+    --text: #fff;
+    --muted: #888;
+  }
+
+  html, body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-1);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,0.15), transparent 60%),
+      radial-gradient(1000px 700px at 100% 100%, rgba(96,165,250,0.12), transparent 60%),
+      linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    z-index: -2;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a2a4a, #0a0a1a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    border: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-size: 22px;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-text p {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 100px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: 8px;
+  }
+
+  .badge.ok { background: rgba(52,211,153,0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+  .badge.warn { background: rgba(251,191,36,0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
+  .badge.err { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title.danger { color: var(--danger); }
+  .card-title.gold { color: var(--gold); }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    font-size: 13.5px;
+  }
+
+  .row + .row { border-top: 1px solid rgba(255,255,255,0.04); }
+
+  .label { color: var(--muted); }
+  .value { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; word-break: break-all; }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3);
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 10px;
+  }
+
+  input:focus { border-color: var(--primary); }
+
+  input::placeholder { color: #555; }
+
+  button {
+    padding: 13px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 11px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  button:not(:disabled):hover { transform: translateY(-1px); }
+  button:not(:disabled):active { transform: translateY(0); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+  }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #1a1a2e;
+  }
+
+  .btn-danger {
+    background: rgba(239,68,68,0.15);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.4);
+  }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .btn-row button { margin-bottom: 0; }
+
+  #connectBtn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    width: 100%;
+    padding: 16px;
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 11px;
+    margin-bottom: 10px;
+  }
+
+  .toggle-label { font-size: 13.5px; font-weight: 600; }
+  .toggle-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .switch {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .switch input { display: none; }
+
+  .switch .slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 100px;
+    transition: 0.3s;
+  }
+
+  .switch .slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    top: 3px;
+    left: 3px;
+    transition: 0.3s;
+  }
+
+  .switch input:checked + .slider {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+  }
+
+  .switch input:checked + .slider::before {
+    transform: translateX(22px);
+  }
+
+  #status {
+    text-align: center;
+    font-size: 13px;
+    color: #bbb;
+    padding: 14px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    margin-top: 10px;
+    word-break: break-word;
+    transition: color 0.3s;
+  }
+
+  #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
+  #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  #status.info { color: var(--secondary); border-color: rgba(96,165,250,0.3); }
+
+  .hidden { display: none !important; }
+
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+    margin: 14px 0;
+  }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+    margin-top: 24px;
+  }
+
+  .footer a { color: var(--primary); text-decoration: none; }
+
+  .warn-box {
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: var(--gold);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  @media (max-width: 480px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">🌙</div>
+    <div class="header-text">
+      <h1>Lunary Admin <span id="ownerBadge" class="badge warn hidden">OWNER</span></h1>
+      <p>LUX · Kontrol Kontrak · Sepolia</p>
+    </div>
+  </div>
+
+  <div id="warnBox" class="warn-box hidden"></div>
+
+  <button id="connectBtn">🔌 Connect Owner Wallet</button>
+
+  <!-- ===================== INFO KONTRAK ===================== -->
+  <div class="card hidden" id="infoCard">
+    <div class="card-title">📊 Info Kontrak</div>
+
+    <div class="row">
+      <span class="label">Kontrak</span>
+      <span class="value" id="infoAddress">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Versi</span>
+      <span class="value" id="infoVersion">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Owner</span>
+      <span class="value" id="infoOwner">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Reward saat ini</span>
+      <span class="value" id="infoReward">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Epoch</span>
+      <span class="value" id="infoEpoch">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Total mined</span>
+      <span class="value" id="infoMined">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Max supply</span>
+      <span class="value" id="infoMax">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Status</span>
+      <span class="value" id="infoPaused">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Saldo POL kontrak</span>
+      <span class="value" id="infoPolBal">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Saldo LUX kontrak</span>
+      <span class="value" id="infoLuxBal">-</span>
+    </div>
+  </div>
+
+  <!-- ===================== ENTRY FEE ===================== -->
+  <div class="card hidden" id="feeCard">
+    <div class="card-title gold">💰 Entry Fee</div>
+
+    <div class="toggle">
+      <div>
+        <div class="toggle-label">Aktifkan Entry Fee</div>
+        <div class="toggle-sub">Address baru wajib bayar untuk mining</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="feeEnabledToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="row">
+      <span class="label">Fee saat ini</span>
+      <span class="value" id="feeCurrent">-</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Ubah nominal (POL)</label>
+    <input type="number" id="feeAmountInput" placeholder="Contoh: 10" step="0.01" min="0">
+
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="setFeePreset(5)">5 POL</button>
+      <button class="btn-ghost" onclick="setFeePreset(10)">10 POL</button>
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn-ghost" onclick="setFeePreset(20)">20 POL</button>
+      <button class="btn-ghost" onclick="setFeePreset(50)">50 POL</button>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button class="btn-gold" id="saveFeeBtn">💾 Simpan Perubahan Fee</button>
+    </div>
+  </div>
+
+  <!-- ===================== WITHDRAW ===================== -->
+  <div class="card hidden" id="withdrawCard">
+    <div class="card-title gold">🏦 Tarik Saldo</div>
+
+    <div class="row">
+      <span class="label">Saldo POL kontrak</span>
+      <span class="value" id="wPolBal">-</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Alamat tujuan</label>
+    <input type="text" id="withdrawTo" placeholder="0x..." value="">
+
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Jumlah POL</label>
+    <input type="number" id="withdrawAmount" placeholder="Contoh: 10" step="0.01" min="0">
+
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="withdrawAll()">Tarik Semua</button>
+      <button class="btn-gold" id="withdrawBtn">Tarik Sebagian</button>
+    </div>
+  </div>
+
+  <!-- ===================== RESCUE ===================== -->
+  <div class="card hidden" id="rescueCard">
+    <div class="card-title danger">🚨 Rescue Token</div>
+
+    <div class="warn-box">
+      ⚠️ Rescue <b>tanpa delay</b> — token langsung terkirim ke owner.
+      Gunakan hanya untuk token yang salah kirim.
+    </div>
+
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">
+      Token address
+    </label>
+    <input type="text" id="rescueToken" placeholder="0x... (kosongkan untuk POL)">
+
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">
+      Jumlah (dalam wei / unit terkecil)
+    </label>
+    <input type="text" id="rescueAmount" placeholder="Contoh: 1000000000000000000">
+
+    <button class="btn-danger" id="rescueBtn">🚨 Rescue Sekarang</button>
+  </div>
+
+  <!-- ===================== PAUSE ===================== -->
+  <div class="card hidden" id="pauseCard">
+    <div class="card-title danger">⏸️ Kontrol Mining</div>
+
+    <div class="row">
+      <span class="label">Status kontrak</span>
+      <span class="value" id="pauseStatus">-</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn-danger" id="pauseBtn">⏸️ Pause Mining</button>
+    <button class="btn-primary" id="unpauseBtn" style="margin-top:8px;">▶️ Unpause Mining</button>
+  </div>
+
+  <!-- ===================== STATUS ===================== -->
+  <div id="status">Belum connect</div>
+
+  <div class="footer">
+    © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+<script>
+// ==================================================
+// KONFIGURASI
+// ==================================================
+const CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
+const SEPOLIA_CHAIN_ID = "0xaa36a7";
+const SEPOLIA_CHAIN_ID_DEC = 11155111;
+
+// ABI versi baru (2 tx) — admin panel butuh function owner
+const ABI_NEW = [
+  // ===== view =====
+  "function owner() view returns (address)",
+  "function paused() view returns (bool)",
+  "function getServerTime() view returns (uint256)",
+  "function getMiningConfig() view returns (uint256 miningDuration, uint256 difficulty, uint256 maxNonce, bool feeEnabled, uint256 feeAmount)",
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function totalClaims() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MAX_NONCE() view returns (uint256)",
+  "function entryFeeEnabled() view returns (bool)",
+  "function entryFee() view returns (uint256)",
+  "function hasMinedBefore(address) view returns (bool)",
+  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
+  "function getTreasuryBalance() view returns (uint256)",
+  "function getLUXBalance() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+  "function getRescueCount() view returns (uint256)",
+  // ===== write owner =====
+  "function setEntryFee(bool enabled, uint256 amount)",
+  "function withdrawEntryFees(address to, uint256 amount)",
+  "function withdrawAllEntryFees(address to)",
+  "function createRescue(address token, uint256 amount) returns (bytes32)",
+  "function pause()",
+  "function unpause()",
+  "function transferOwnership(address newOwner)",
+  // ===== events =====
+  "event EntryFeeUpdated(bool enabled, uint256 amount)",
+  "event EntryFeeWithdrawn(address indexed to, uint256 amount)",
+  "event RescueCreated(bytes32 indexed id, address token, uint256 amount)",
+  "event RescueExecuted(bytes32 indexed id, address token, uint256 amount)",
+  "event Paused(address account)",
+  "event Unpaused(address account)"
+];
+
+// ABI versi lama — fallback (commitMining, startMining 1 arg, dll)
+const ABI_OLD = [
+  "function owner() view returns (address)",
+  "function paused() view returns (bool)",
+  "function getServerTime() view returns (uint256)",
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function totalClaims() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MAX_NONCE() view returns (uint256)",
+  "function entryFeeEnabled() view returns (bool)",
+  "function entryFee() view returns (uint256)",
+  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
+  "function getTreasuryBalance() view returns (uint256)",
+  "function getLUXBalance() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+  "function setEntryFee(bool enabled, uint256 amount)",
+  "function withdrawEntryFees(address to, uint256 amount)",
+  "function withdrawAllEntryFees(address to)",
+  "function createRescue(address token, uint256 amount) returns (bytes32)",
+  "function pause()",
+  "function unpause()",
+  "function transferOwnership(address newOwner)",
+  "event EntryFeeUpdated(bool enabled, uint256 amount)",
+  "event EntryFeeWithdrawn(address indexed to, uint256 amount)",
+  "event RescueCreated(bytes32 indexed id, address token, uint256 amount)",
+  "event RescueExecuted(bytes32 indexed id, address token, uint256 amount)",
+  "event Paused(address account)",
+  "event Unpaused(address account)"
+];
+
+// ==================================================
+// STATE
+// ==================================================
+let provider, signer, contract, userAddress, ownerAddress;
+let contractVersion = "new";
+let isWorking = false;
+
+const $ = (id) => document.getElementById(id);
+
+// ==================================================
+// HELPERS
+// ==================================================
+function shortAddr(a) {
+  if (!a || a === "0x0000000000000000000000000000000000000000") return "—";
+  return a.slice(0, 6) + "..." + a.slice(-4);
+}
+
+function fmtLUX(v, decimals = 8) {
+  try {
+    const s = ethers.utils.formatUnits(v, decimals);
+    const n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toLocaleString("id-ID", { maximumFractionDigits: 8 });
+  } catch { return v.toString(); }
+}
+
+function fmtEth(v) {
+  try {
+    const s = ethers.utils.formatEther(v);
+    const n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toLocaleString("id-ID", { maximumFractionDigits: 6 });
+  } catch { return v.toString(); }
+}
+
+function setStatus(msg, type = "") {
+  const el = $("status");
+  el.innerText = msg;
+  el.className = type;
+}
+
+function decodeError(e) {
+  if (!e) return "Unknown error";
+  if (typeof e === "string") return e;
+  if (e.reason) return e.reason;
+
+  const data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
+
+  if (typeof data === "string" && data.startsWith("0x08c379a0")) {
+    try {
+      return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0];
+    } catch {}
+  }
+
+  if (typeof data === "string" && data.startsWith("0x4e487b71")) {
+    const code = parseInt(data.slice(10, 74), 16);
+    return `Panic code 0x${code.toString(16)}`;
+  }
+
+  if (e.message) return e.message;
+  if (e.error && e.error.message) return e.error.message;
+  return "Transaction reverted";
+}
+
+// ==================================================
+// DETEKSI VERSI KONTRAK
+// ==================================================
+async function detectContractVersion(prov) {
+  const code = await prov.getCode(CONTRACT_ADDRESS);
+  if (!code || code === "0x") {
+    throw new Error("Alamat kontrak tidak ada di Sepolia.");
+  }
+
+  const ifaceNew = new ethers.utils.Interface(ABI_NEW);
+  const data = ifaceNew.encodeFunctionData("getMiningConfig", []);
+
+  try {
+    const result = await prov.call({ to: CONTRACT_ADDRESS, data });
+    if (result && result.length > 2) return "new";
+  } catch {}
+
+  return "old";
+}
+
+// ==================================================
+// CONNECT WALLET
+// ==================================================
+$("connectBtn").onclick = async () => {
+  if (!window.ethereum) {
+    setStatus("❌ Install MetaMask dulu!", "error");
+    return;
+  }
+  try {
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    await provider.send("eth_requestAccounts", []);
+
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== SEPOLIA_CHAIN_ID_DEC) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: SEPOLIA_CHAIN_ID }],
+        });
+        location.reload();
+        return;
+      } catch (e) {
+        setStatus("❌ Switch ke Sepolia dulu: " + decodeError(e), "error");
+        return;
+      }
+    }
+
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    setStatus("🔍 Memeriksa kontrak...", "info");
+    contractVersion = await detectContractVersion(provider);
+
+    const abi = contractVersion === "new" ? ABI_NEW : ABI_OLD;
+    contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+
+    // cek owner
+    ownerAddress = await contract.owner();
+    const isOwner = ownerAddress.toLowerCase() === userAddress.toLowerCase();
+
+    if (!isOwner) {
+      $("warnBox").classList.remove("hidden");
+      $("warnBox").innerHTML = `
+        ⚠️ Wallet kamu <b>bukan owner</b> kontrak.<br>
+        Owner: <code>${ownerAddress}</code><br>
+        Kamu: <code>${userAddress}</code><br>
+        Panel admin hanya bisa dibaca.
+      `;
+      $("ownerBadge").className = "badge err";
+      $("ownerBadge").innerText = "BUKAN OWNER";
+      $("ownerBadge").classList.remove("hidden");
+    } else {
+      $("warnBox").classList.add("hidden");
+      $("ownerBadge").className = "badge ok";
+      $("ownerBadge").innerText = "OWNER";
+      $("ownerBadge").classList.remove("hidden");
+    }
+
+    // enable write button hanya kalau owner
+    const writeBtns = ["saveFeeBtn", "withdrawBtn", "rescueBtn", "pauseBtn", "unpauseBtn", "feeEnabledToggle"];
+    writeBtns.forEach(id => {
+      const el = $(id);
+      if (el) el.disabled = !isOwner;
+    });
+
+    $("connectBtn").style.display = "none";
+    ["infoCard", "feeCard", "withdrawCard", "rescueCard", "pauseCard"].forEach(id => {
+      $(id).classList.remove("hidden");
+    });
+
+    setStatus(`✅ Connected sebagai ${isOwner ? "OWNER" : "viewer"}`, "success");
+
+    await loadAllInfo();
+    await loadFeeInfo();
+
+    // auto refresh tiap 15 detik
+    setInterval(async () => {
+      try { await loadAllInfo(); } catch {}
+    }, 15000);
+
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged", () => location.reload());
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  }
+};
+
+// ==================================================
+// LOAD INFO KONTRAK
+// ==================================================
+async function loadAllInfo() {
+  if (!contract) return;
+
+  try {
+    const [reward, epoch, mined, max, paused, polBal, luxBal, feeInfo] = await Promise.all([
+      contract.currentReward(),
+      contract.currentEpoch(),
+      contract.totalMined(),
+      contract.MAX_SUPPLY(),
+      contract.paused().catch(() => false),
+      contract.getTreasuryBalance().catch(() => ethers.BigNumber.from(0)),
+      contract.getLUXBalance().catch(() => ethers.BigNumber.from(0)),
+      contract.getEntryFeeInfo().catch(() => ({ enabled: false, amount: ethers.BigNumber.from(0) }))
+    ]);
+
+    $("infoAddress").innerText = shortAddr(CONTRACT_ADDRESS);
+    $("infoVersion").innerText = contractVersion === "new" ? "Baru (2 tx)" : "Lama (3 tx)";
+    $("infoOwner").innerText = shortAddr(ownerAddress);
+    $("infoReward").innerText = fmtLUX(reward) + " LUX";
+    $("infoEpoch").innerText = epoch.toString();
+    $("infoMined").innerText = fmtLUX(mined) + " LUX";
+    $("infoMax").innerText = fmtLUX(max) + " LUX";
+    $("infoPaused").innerHTML = paused
+      ? '<span style="color:var(--danger)">PAUSED</span>'
+      : '<span style="color:var(--success)">AKTIF</span>';
+    $("infoPolBal").innerText = fmtEth(polBal) + " ETH";
+    $("infoLuxBal").innerText = fmtLUX(luxBal) + " LUX";
+
+    $("pauseStatus").innerHTML = paused
+      ? '<span style="color:var(--danger)">PAUSED</span>'
+      : '<span style="color:var(--success)">AKTIF</span>';
+
+    $("wPolBal").innerText = fmtEth(polBal) + " ETH";
+  } catch (e) {
+    console.error("loadAllInfo error:", e);
+  }
+}
+
+// ==================================================
+// LOAD FEE
+// ==================================================
+async function loadFeeInfo() {
+  if (!contract) return;
+  try {
+    const feeInfo = await contract.getEntryFeeInfo();
+    const enabled = feeInfo.enabled;
+    const amount = feeInfo.amount;
+
+    $("feeEnabledToggle").checked = enabled;
+    $("feeCurrent").innerText = enabled
+      ? fmtEth(amount) + " ETH"
+      : "Nonaktif";
+
+    if ($("withdrawTo").value === "") {
+      $("withdrawTo").value = ownerAddress;
+    }
+  } catch (e) {
+    console.error("loadFeeInfo error:", e);
+  }
+}
+
+// ==================================================
+// SET FEE PRESET
+// ==================================================
+window.setFeePreset = function(amount) {
+  $("feeAmountInput").value = amount;
+};
+
+// ==================================================
+// SAVE FEE
+// ==================================================
+$("saveFeeBtn").onclick = async () => {
+  if (isWorking) return;
+  isWorking = true;
+  try {
+    const enabled = $("feeEnabledToggle").checked;
+    const amountStr = $("feeAmountInput").value.trim();
+
+    let amount;
+    if (amountStr === "") {
+      // pakai amount lama
+      const feeInfo = await contract.getEntryFeeInfo();
+      amount = feeInfo.amount;
+    } else {
+      const n = Number(amountStr);
+      if (!isFinite(n) || n < 0) {
+        throw new Error("Nominal tidak valid");
+      }
+      amount = ethers.utils.parseEther(amountStr);
+    }
+
+    setStatus("⏳ Mengubah entry fee...", "info");
+
+    try {
+      await contract.estimateGas.setEntryFee(enabled, amount);
+    } catch (estErr) {
+      throw new Error("Estimasi gagal: " + decodeError(estErr));
+    }
+
+    const tx = await contract.setEntryFee(enabled, amount);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Entry fee diubah: ${enabled ? fmtEth(amount) + " ETH" : "Nonaktif"}`, "success");
+    await loadFeeInfo();
+    await loadAllInfo();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// WITHDRAW
+// ==================================================
+$("withdrawBtn").onclick = async () => {
+  if (isWorking) return;
+  isWorking = true;
+  try {
+    const to = $("withdrawTo").value.trim();
+    const amtStr = $("withdrawAmount").value.trim();
+
+    if (!ethers.utils.isAddress(to)) throw new Error("Alamat tujuan tidak valid");
+    if (amtStr === "") throw new Error("Jumlah belum diisi");
+
+    const amount = ethers.utils.parseEther(amtStr);
+    if (amount.lte(0)) throw new Error("Jumlah harus > 0");
+
+    setStatus("⏳ Menarik saldo...", "info");
+
+    try {
+      await contract.estimateGas.withdrawEntryFees(to, amount);
+    } catch (estErr) {
+      throw new Error("Estimasi gagal: " + decodeError(estErr
