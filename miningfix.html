@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunary (LUX) — Mining</title>
+<link rel="icon" type="image/png" href="https://lunary.xyz/asset/lunary.png">
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-1: #0a0a1a; --bg-2: #1a1a3a;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --primary: #a78bfa; --secondary: #60a5fa;
+    --gold: #fbbf24; --gold-2: #f59e0b;
+    --danger: #ef4444; --success: #34d399;
+    --text: #fff; --muted: #888;
+  }
+  html, body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-1); color: var(--text);
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,0.18), transparent 60%),
+      radial-gradient(1000px 700px at 100% 100%, rgba(96,165,250,0.15), transparent 60%),
+      linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    z-index: -2;
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 80% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff, transparent),
+      radial-gradient(1px 1px at 60% 10%, #fff, transparent),
+      radial-gradient(1px 1px at 25% 85%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 90% 75%, #fff, transparent);
+    opacity: 0.35; z-index: -1;
+    animation: twinkle 8s infinite alternate;
+  }
+  @keyframes twinkle { from{opacity:.2} to{opacity:.5} }
+  .container { max-width: 520px; width: 100%; margin: 0 auto; padding: 28px 20px 60px; }
+  .header { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
+  .logo-wrap { position: relative; width: 96px; height: 96px; margin-bottom: 14px; }
+  .logo-wrap::before {
+    content: ''; position: absolute; inset: -6px; border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--primary), var(--secondary), var(--primary));
+    filter: blur(14px); opacity: 0.55; animation: spin 8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .logo {
+    position: relative; width: 96px; height: 96px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+    object-fit: cover; display: block;
+  }
+  .logo-fallback {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 44px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a2a4a, #0a0a1a);
+  }
+  h1 {
+    font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .tagline {
+    font-size: 12px; color: var(--muted); margin-top: 4px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 18px; padding: 18px 20px; margin-bottom: 14px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .card-title {
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--primary);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title.gold { color: var(--gold); }
+  .card-title.danger { color: var(--danger); }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 14px;
+  }
+  .row + .row { border-top: 1px solid rgba(255,255,255,0.04); }
+  .label { color: var(--muted); }
+  .value { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .value.gold {
+    background: linear-gradient(90deg, var(--gold), var(--gold-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .timer-card { text-align: center; padding: 26px 20px; }
+  #timer {
+    font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px; min-height: 52px;
+  }
+  #timerLabel {
+    font-size: 11px; color: var(--muted); letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .progress-wrap {
+    margin-top: 16px; height: 6px; background: rgba(255,255,255,0.06);
+    border-radius: 100px; overflow: hidden;
+  }
+  #progressBar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 100px; transition: width 0.5s ease;
+    box-shadow: 0 0 12px rgba(167,139,250,0.6);
+  }
+  .pow-info {
+    font-size: 11px; color: var(--muted); margin-top: 10px;
+    font-variant-numeric: tabular-nums; min-height: 16px;
+  }
+  button {
+    width: 100%; padding: 16px; font-size: 15px; font-weight: 700;
+    border-radius: 14px; border: none; cursor: pointer; margin-bottom: 10px;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.3s;
+    font-family: inherit; letter-spacing: 0.3px;
+  }
+  button:not(:disabled):hover { transform: translateY(-1px); }
+  button:disabled { cursor: not-allowed; }
+  #connectBtn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; border: none; margin-bottom: 16px;
+    box-shadow: 0 6px 20px rgba(167,139,250,0.35);
+  }
+  #startBtn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; box-shadow: 0 6px 20px rgba(167,139,250,0.35);
+  }
+  #startBtn:disabled {
+    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
+  }
+  #claimBtn {
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #1a1a2e; box-shadow: 0 6px 20px rgba(251,191,36,0.3);
+  }
+  #claimBtn:disabled {
+    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
+  }
+  #payFeeBtn {
+    background: linear-gradient(135deg, #f472b6, #ec4899);
+    color: #fff; box-shadow: 0 6px 20px rgba(244,114,182,0.35);
+  }
+  #payFeeBtn:disabled {
+    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
+  }
+  #withdrawBtn {
+    background: linear-gradient(135deg, var(--success), #10b981);
+    color: #052e16; box-shadow: 0 6px 20px rgba(52,211,153,0.35);
+  }
+  #withdrawBtn:disabled {
+    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
+  }
+  #status {
+    text-align: center; font-size: 13px; color: #bbb;
+    padding: 14px; background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px; margin-top: 4px;
+    transition: color 0.3s; word-break: break-word; line-height: 1.5;
+  }
+  #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
+  #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  #status.info { color: var(--secondary); border-color: rgba(96,165,250,0.3); }
+  .footer { text-align: center; font-size: 11px; color: #555; margin-top: 24px; }
+  .footer a { color: var(--primary); text-decoration: none; }
+  .hidden { display: none !important; }
+  .network-warn {
+    text-align: center; font-size: 12px; color: #fbbf24;
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 10px; padding: 10px; margin-bottom: 12px;
+  }
+  .network-warn button {
+    margin-top: 8px; margin-bottom: 0; padding: 10px 14px;
+    font-size: 13px; width: auto; display: inline-block;
+    background: linear-gradient(135deg, var(--gold), var(--gold-2));
+    color: #1a1a2e;
+  }
+  .badge {
+    display: inline-block; font-size: 10px; padding: 3px 8px;
+    border-radius: 100px; letter-spacing: 1px; text-transform: uppercase;
+    font-weight: 700;
+  }
+  .badge.ok { background: rgba(52,211,153,0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+  .badge.warn { background: rgba(251,191,36,0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
+  .badge.err { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+  .mini-bar {
+    height: 8px; background: rgba(255,255,255,0.06); border-radius: 100px;
+    overflow: hidden; margin: 8px 0 4px;
+  }
+  .mini-bar > div {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--success), #10b981);
+    border-radius: 100px; transition: width 0.5s;
+  }
+  .mini-info {
+    font-size: 11px; color: var(--muted); text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  #debugPanel {
+    margin-top: 10px; font-size: 11px; color: #f87171;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; padding: 10px; line-height: 1.5;
+    word-break: break-all; max-height: 160px; overflow-y: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (max-width: 400px) {
+    #timer { font-size: 36px; }
+    h1 { font-size: 26px; }
+    .logo, .logo-wrap { width: 80px; height: 80px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo-wrap">
+      <div class="logo-fallback">🌙</div>
+      <img id="logo" class="logo" src="https://lunary.xyz/asset/lunary.png"
+           alt="Lunary Logo" onerror="this.style.display='none';" />
+    </div>
+    <h1>Lunary</h1>
+    <div class="tagline">LUX · PoW Mining · 4× Halving</div>
+  </div>
+
+  <div id="networkWarn" class="network-warn hidden">
+    ⚠️ Wrong network. Please switch to <b>Sepolia Testnet</b>.
+    <br>
+    <button id="switchNetBtn" type="button">🔁 Switch to Sepolia</button>
+  </div>
+
+  <button id="connectBtn" type="button">🔌 Connect Wallet</button>
+
+  <!-- STATS -->
+  <div class="card hidden" id="statsCard">
+    <div class="row">
+      <span class="label">Wallet</span>
+      <span class="value" id="wallet">-</span>
+    </div>
+    <div class="row">
+      <span class="label">LUX Balance (wallet)</span>
+      <span class="value gold" id="luxBal">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Current Reward</span>
+      <span class="value gold" id="reward">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Epoch</span>
+      <span class="value" id="epoch">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Total Mined</span>
+      <span class="value" id="mined">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Max Supply</span>
+      <span class="value" id="maxSupply">-</span>
+    </div>
+  </div>
+
+  <!-- MINER STATUS -->
+  <div class="card hidden" id="minerCard">
+    <div class="card-title">🔑 Miner Status</div>
+    <div class="row">
+      <span class="label">Entry Fee</span>
+      <span class="value" id="minerFeeInfo">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Whitelist Status</span>
+      <span class="value" id="minerAuthStatus">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Allowed to Mine?</span>
+      <span class="value" id="minerAllowedStatus">-</span>
+    </div>
+    <div id="payFeeWrap" class="hidden" style="margin-top:12px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center;">
+        You are not registered yet. Pay the fee once to enable mining.
+      </div>
+      <button id="payFeeBtn" type="button" disabled>💳 Pay Fee & Register</button>
+    </div>
+    <div id="debugPanel" class="hidden"></div>
+  </div>
+
+  <!-- MINING -->
+  <div class="card timer-card hidden" id="miningCard">
+    <div id="timer">--:--:--</div>
+    <div id="timerLabel">Mining Time</div>
+
+    <div class="progress-wrap">
+      <div id="progressBar"></div>
+    </div>
+    <div class="pow-info" id="powProgress">PoW: idle</div>
+
+    <div style="margin-top:20px;">
+      <button id="startBtn" type="button" disabled>▶️ Start Mining</button>
+      <button id="claimBtn" type="button" disabled>💰 Claim Reward</button>
+    </div>
+  </div>
+
+  <!-- PENDING BALANCE -->
+  <div class="card hidden" id="pendingCard">
+    <div class="card-title gold">💎 Mined Balance (Not in Wallet)</div>
+    <div class="row">
+      <span class="label">Pending Balance</span>
+      <span class="value gold" id="pendingBalance">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Min. Withdraw</span>
+      <span class="value" id="minClaimInfo">-</span>
+    </div>
+    <div class="mini-bar"><div id="pendingBar"></div></div>
+    <div class="mini-info" id="pendingInfo">-</div>
+    <div style="margin-top:12px;">
+      <button id="withdrawBtn" type="button" disabled>🏦 Withdraw to Wallet</button>
+    </div>
+  </div>
+
+  <div id="status">Waiting...</div>
+
+  <div class="footer">
+    © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+<script>
+// ==================================================
+// CONFIG
+// ==================================================
+var CONTRACT_ADDRESS = "0xB31E8b279646fD274758E21716b01f13026A2E24";
+var SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
+var SEPOLIA_CHAIN_ID_DEC = 11155111;
+var SITE_URL = "https://lunarylux.github.io";
+
+// Gas overrides — kasih buffer biar tx gak stuck
+var GAS_LIMIT_START_MINING = 350000;
+var GAS_LIMIT_CLAIM = 250000;
+var GAS_LIMIT_ADD_MINER = 150000;
+var GAS_LIMIT_WITHDRAW = 150000;
+
+// ==================================================
+// ABI
+// ==================================================
+var ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MIN_CLAIM_AMOUNT() view returns (uint256)",
+
+  "function startMining(bytes32 clientSeed)",
+  "function claim(uint256 nonce)",
+  "function cancelMining()",
+  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
+  "function canClaim(address) view returns (bool)",
+  "function timeRemaining(address) view returns (uint256)",
+  "function currentReward() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function totalMined() view returns (uint256)",
+  "function totalClaims() view returns (uint256)",
+  "function DIFFICULTY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
+
+  "function minerFeeEnabled() view returns (bool)",
+  "function minerFee() view returns (uint256)",
+  "function addMiner(address miner) payable",
+  "function authorizedMiners(address) view returns (bool)",
+  "function isMinerAllowed(address) view returns (bool)",
+
+  "function minedBalance(address) view returns (uint256)",
+  "function totalPendingClaims() view returns (uint256)",
+  "function canWithdraw(address) view returns (bool)",
+  "function amountNeededToWithdraw(address) view returns (uint256)",
+  "function claimToWallet()",
+
+  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge)",
+  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)",
+  "event MinedAccumulated(address indexed user, uint256 amount, uint256 newBalance)",
+  "event WithdrawnToWallet(address indexed user, uint256 amount)",
+  "event MinerAdded(address indexed miner, uint256 feePaid, address indexed payer)"
+];
+
+// ==================================================
+// STATE
+// ==================================================
+var provider = null;
+var signer = null;
+var contract = null;
+var userAddress = null;
+
+var timerInterval = null;
+var syncInterval = null;
+var foundNonce = null;
+var powRunning = false;
+var cachedChallenge = null;
+var cachedDifficulty = 100000n;
+
+var sessionStartTime = 0;
+var sessionDuration = 14400;
+var serverOffset = 0;
+var canClaimTime = false;
+
+var cachedMinerFeeEnabled = false;
+var cachedMinerFee = 0n;
+var cachedMinerAuthorized = false;
+var cachedMinerAllowed = false;
+var cachedMinClaim = 20n * 100000000n;
+var cachedPendingBalance = 0n;
+
+var isWorking = false;
+var isConnecting = false;
+
+// ==================================================
+// HELPERS
+// ==================================================
+function $(id) { return document.getElementById(id); }
+
+function shortAddr(a) {
+  if (!a) return "—";
+  return a.slice(0, 6) + "..." + a.slice(-4);
+}
+function p2(n) { return String(n).padStart(2, "0"); }
+
+function fmtLUX(v) {
+  try {
+    if (typeof ethers === "undefined") return v.toString();
+    var s = ethers.utils.formatUnits(v, 8);
+    var n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toLocaleString("en-US", { maximumFractionDigits: 8 });
+  } catch (e) { return String(v); }
+}
+function fmtEth(v) {
+  try {
+    var s = ethers.utils.formatEther(v);
+    var n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toLocaleString("en-US", { maximumFractionDigits: 6 });
+  } catch (e) { return String(v); }
+}
+
+function setStatus(msg, type) {
+  type = type || "";
+  var el = $("status");
+  if (!el) return;
+  el.innerHTML = msg;
+  el.className = type;
+}
+function setProgress(pct) {
+  var el = $("progressBar");
+  if (el) el.style.width = Math.max(0, Math.min(100, pct)) + "%";
+}
+function setPowInfo(msg) {
+  var el = $("powProgress");
+  if (el) el.innerText = msg;
+}
+
+function showDebug(msg) {
+  var el = $("debugPanel");
+  if (!el) return;
+  el.classList.remove("hidden");
+  el.innerText = msg;
+  console.error("[DEBUG]", msg);
+}
+
+function decodeError(e) {
+  if (!e) return "Unknown error";
+  if (typeof e === "string") return e;
+  if (e.reason) return e.reason;
+  var data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
+  if (typeof data === "string" && data.indexOf("0x08c379a0") === 0) {
+    try {
+      return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0];
+    } catch (x) {}
+  }
+  if (typeof data === "string" && data.indexOf("0x4e487b71") === 0) {
+    var code = parseInt(data.slice(10, 74), 16);
+    return "Panic 0x" + code.toString(16);
+  }
+  if (e.message) return e.message;
+  if (e.error && e.error.message) return e.error.message;
+  return "Transaction reverted";
+}
+
+function isMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+function hasInjectedWallet() {
+  return typeof window.ethereum !== "undefined";
+}
+
+// ==================================================
+// SAFE CALL
+// ==================================================
+async function safeCall(fn, fallback) {
+  try { return await fn(); }
+  catch (e) { console.warn("safeCall failed:", e); return fallback; }
+}
+
+// ==================================================
+// FAST CONTRACT VERIFY — cuma 1 call!
+// ==================================================
+async function fastVerifyContract(prov) {
+  var cacheKey = "lux_abi_ok_" + CONTRACT_ADDRESS.toLowerCase();
+  try {
+    var cached = sessionStorage.getItem(cacheKey);
+    if (cached === "1") return true;
+  } catch (e) {}
+
+  // Coba panggil 1 fungsi yang paling unik
+  var iface = new ethers.utils.Interface(ABI);
+  var data = iface.encodeFunctionData("currentReward", []);
+  try {
+    var res = await prov.call({ to: CONTRACT_ADDRESS, data: data });
+    if (res && res !== "0x") {
+      try { sessionStorage.setItem(cacheKey, "1"); } catch (e) {}
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.warn("Contract verify failed:", e);
+    return false;
+  }
+}
+
+// ==================================================
+// FAST TIME SYNC — pakai block.number langsung, bukan getBlock()
+// ==================================================
+async function syncServerTime() {
+  try {
+    // Panggil latest block number cepat, lalu ambil timestamp dari block itu
+    // Tapi lebih cepat: pakai eth_getBlockByNumber("latest", false)
+    var block = await provider.send("eth_getBlockByNumber", ["latest", false]);
+    if (block && block.timestamp) {
+      var ts = parseInt(block.timestamp, 16);
+      var localNow = Math.floor(Date.now() / 1000);
+      serverOffset = ts - localNow;
+    }
+  } catch (e) {
+    // fallback: skip, offset tetap 0
+    serverOffset = 0;
+  }
+}
+
+// ==================================================
+// SWITCH / ADD SEPOLIA
+// ==================================================
+async function ensureSepolia() {
+  if (!window.ethereum) throw new Error("MetaMask not detected");
+  var current = await window.ethereum.request({ method: "eth_chainId" });
+  if (current.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }]
+    });
+  } catch (err) {
+    if (err.code === 4902 || err.code === -32603) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: SEPOLIA_CHAIN_ID_HEX,
+            chainName: "Sepolia Testnet",
+            nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://rpc.sepolia.org", "https://sepolia.drpc.org"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"]
+          }]
+        });
+      } catch (addErr) {
+        if (addErr.code === 4001) throw new Error("You rejected adding Sepolia");
+        throw new Error("Failed to add Sepolia: " + (addErr.message || addErr));
+      }
+    } else if (err.code === 4001) {
+      throw new Error("You rejected switching to Sepolia");
+    } else {
+      throw new Error("Failed to switch: " + (err.message || err));
+    }
+  }
+
+  var start = Date.now();
+  while (Date.now() - start < 5000) {
+    var c = await window.ethereum.request({ method: "eth_chainId" });
+    if (c.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
+    await new Promise(function(r) { setTimeout(r, 200); });
+  }
+  throw new Error("Timeout: MetaMask did not switch to Sepolia");
+}
+
+// ==================================================
+// CONNECT CORE
+// ==================================================
+async function doConnect() {
+  if (isConnecting) return;
+  isConnecting = true;
+  try {
+    if (typeof ethers === "undefined") {
+      setStatus("❌ ethers library failed to load.", "error");
+      return;
+    }
+
+    if (!hasInjectedWallet()) {
+      var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
+      setStatus(
+        '❌ Wallet not detected.<br><br>' +
+        '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
+        'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
+        '🦊 Open in MetaMask</a>',
+        "error"
+      );
+      return;
+    }
+
+    setStatus("🔓 Requesting account access...", "info");
+    var accounts;
+    try {
+      accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    } catch (accErr) {
+      if (accErr.code === 4001) {
+        setStatus("❌ You rejected the connection request.", "error");
+        return;
+      }
+      throw accErr;
+    }
+    if (!accounts || accounts.length === 0) {
+      setStatus("❌ No account detected.", "error");
+      return;
+    }
+    userAddress = accounts[0];
+
+    var chainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Wrong network. Click <b>Switch to Sepolia</b> above.", "error");
+      return;
+    }
+    $("networkWarn").classList.add("hidden");
+
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    signer = provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    // ===== FAST verify (1 call) =====
+    var ok = await fastVerifyContract(provider);
+    if (!ok) {
+      setStatus("❌ Contract not responding at this address.", "error");
+      return;
+    }
+
+    // ===== Load constants dulu (semua paralel) — kalau tidak ada, pakai default =====
+    var consts = await Promise.all([
+      safeCall(function() { return contract.DIFFICULTY(); }, null),
+      safeCall(function() { return contract.MINING_DURATION(); }, null),
+      safeCall(function() { return contract.MIN_CLAIM_AMOUNT(); }, null)
+    ]);
+    if (consts[0]) cachedDifficulty = BigInt(consts[0].toString());
+    if (consts[1]) sessionDuration = Number(consts[1]);
+    if (consts[2]) cachedMinClaim = BigInt(consts[2].toString());
+
+    // ===== Sync time (paralel dengan UI setup) =====
+    syncServerTime().catch(function() {});
+
+    // ===== Show UI segera, jangan tunggu sync time =====
+    $("wallet").innerText = shortAddr(userAddress);
+    $("connectBtn").style.display = "none";
+    $("statsCard").classList.remove("hidden");
+    $("minerCard").classList.remove("hidden");
+    $("miningCard").classList.remove("hidden");
+    $("pendingCard").classList.remove("hidden");
+
+    // ===== Load data (paralel, tidak block UI) =====
+    updateUI();
+
+    // ===== Timer setup =====
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+
+    // ===== Sync tiap 60 detik (bukan 30) =====
+    if (syncInterval) clearInterval(syncInterval);
+    syncInterval = setInterval(function() {
+      updateUI();
+    }, 60000);
+
+  } catch (e) {
+    console.error("Connect error:", e);
+    var msg = decodeError(e);
+    if (msg.toLowerCase().indexOf("user rejected") >= 0 ||
+        msg.toLowerCase().indexOf("user denied") >= 0) {
+      setStatus("❌ You rejected the connection request.", "error");
+    } else {
+      setStatus("❌ " + msg, "error");
+    }
+  } finally {
+    isConnecting = false;
+  }
+}
+
+// ==================================================
+// UPDATE UI — semua fetch paralel
+// ==================================================
+async function updateUI() {
+  if (!contract || !userAddress) return;
+  try {
+    var now = Math.floor(Date.now() / 1000) + serverOffset;
+
+    // Semua fetch sekaligus paralel
+    var results = await Promise.all([
+      safeCall(function() { return contract.currentReward(); }, null),
+      safeCall(function() { return contract.currentEpoch(); }, null),
+      safeCall(function() { return contract.totalMined(); }, null),
+      safeCall(function() { return contract.MAX_SUPPLY(); }, null),
+      safeCall(function() { return contract.balanceOf(userAddress); }, null),
+      safeCall(function() { return contract.minerFeeEnabled(); }, null),
+      safeCall(function() { return contract.minerFee(); }, null),
+      safeCall(function() { return contract.authorizedMiners(userAddress); }, null),
+      safeCall(function() { return contract.isMinerAllowed(userAddress); }, null),
+      safeCall(function() { return contract.minedBalance(userAddress); }, null),
+      safeCall(function() { return contract.sessions(userAddress); }, null)
+    ]);
+
+    var reward = results[0], epoch = results[1], mined = results[2];
+    var maxSupply = results[3], bal = results[4];
+    var feeEnabled = results[5], fee = results[6];
+    var authorized = results[7], allowed = results[8];
+    var pendingBal = results[9], session = results[10];
+
+    if (feeEnabled !== null) cachedMinerFeeEnabled = !!feeEnabled;
+    if (fee !== null) cachedMinerFee = BigInt(fee.toString());
+    if (authorized !== null) cachedMinerAuthorized = !!authorized;
+    if (allowed !== null) cachedMinerAllowed = !!allowed;
+    if (pendingBal !== null) cachedPendingBalance = BigInt(pendingBal.toString());
+
+    // ===== STATS =====
+    if (reward !== null) $("reward").innerText = fmtLUX(reward) + " LUX";
+    if (epoch !== null) $("epoch").innerText = epoch.toString();
+    if (mined !== null) $("mined").innerText = fmtLUX(mined) + " LUX";
+    if (maxSupply !== null) $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
+    if (bal !== null) $("luxBal").innerText = fmtLUX(bal) + " LUX";
+
+    // ===== FEE & MINER =====
+    if (feeEnabled !== null) {
+      if (feeEnabled) {
+        $("minerFeeInfo").innerHTML = '<span class="badge warn">ON</span> ' + fmtEth(cachedMinerFee) + " ETH";
+      } else {
+        $("minerFeeInfo").innerHTML = '<span class="badge ok">OFF</span> Free';
+      }
+    }
+    if (authorized !== null) {
+      $("minerAuthStatus").innerHTML = authorized
+        ? '<span class="badge ok">AUTHORIZED</span>'
+        : '<span class="badge err">NOT YET</span>';
+    }
+    if (allowed !== null) {
+      $("minerAllowedStatus").innerHTML = allowed
+        ? '<span class="badge ok">YES</span>'
+        : '<span class="badge err">NO</span>';
+    }
+
+    var payWrap = $("payFeeWrap");
+    var payBtn = $("payFeeBtn");
+    if (cachedMinerFeeEnabled && !cachedMinerAuthorized) {
+      payWrap.classList.remove("hidden");
+      payBtn.disabled = false;
+      payBtn.innerText = "💳 Pay " + fmtEth(cachedMinerFee) + " ETH & Register Miner";
+    } else {
+      payWrap.classList.add("hidden");
+      payBtn.disabled = true;
+    }
+
+    // ===== PENDING =====
+    $("pendingBalance").innerText = fmtLUX(cachedPendingBalance) + " LUX";
+    $("minClaimInfo").innerText = fmtLUX(cachedMinClaim) + " LUX";
+
+    var pctPending = cachedMinClaim > 0n
+      ? Math.min(100, Number((cachedPendingBalance * 10000n) / cachedMinClaim) / 100)
+      : 0;
+    $("pendingBar").style.width = pctPending + "%";
+
+    var withdrawBtn = $("withdrawBtn");
+    if (cachedPendingBalance >= cachedMinClaim && cachedMinClaim > 0n) {
+      $("pendingInfo").innerHTML = '<span style="color:var(--success);font-weight:700;">✅ Ready to withdraw!</span>';
+      withdrawBtn.disabled = false;
+      withdrawBtn.innerText = "🏦 Withdraw " + fmtLUX(cachedPendingBalance) + " LUX to Wallet";
+    } else {
+      var needed = cachedMinClaim - cachedPendingBalance;
+      if (needed < 0n) needed = 0n;
+      $("pendingInfo").innerHTML = "Need <b>" + fmtLUX(needed) + " LUX</b> more";
+      withdrawBtn.disabled = true;
+      withdrawBtn.innerText = "🏦 Withdraw (min " + fmtLUX(cachedMinClaim) + " LUX)";
+    }
+
+    // ===== MINING STATE =====
+    var startBtn = $("startBtn");
+    var claimBtn = $("claimBtn");
+
+    if (!session) {
+      // session fetch gagal — jangan ubah state, biar user bisa retry
+      return;
+    }
+
+    var active = session.active;
+    var claimed = session.claimed;
+
+    if (!active && !claimed) {
+      if (!cachedMinerAllowed) {
+        startBtn.disabled = true;
+        startBtn.innerText = "🔒 Not Whitelisted";
+      } else {
+        startBtn.disabled = false;
+        startBtn.innerText = "▶️ Start Mining";
+      }
+      claimBtn.disabled = true;
+      claimBtn.innerText = "💰 Claim Reward";
+      $("timer").innerText = "--:--:--";
+      $("timerLabel").innerText = cachedMinerAllowed ? "Ready to start" : "Pay the fee first";
+      setProgress(0);
+      setPowInfo("PoW: idle");
+      foundNonce = null;
+      cachedChallenge = null;
+      canClaimTime = false;
+      sessionStartTime = 0;
+
+    } else if (active && !claimed) {
+      cachedChallenge = session.challenge;
+      sessionStartTime = Number(session.startTime);
+
+      var elapsed = now - sessionStartTime;
+      var remaining = sessionDuration - elapsed;
+
+      startBtn.disabled = true;
+      startBtn.innerText = "⛏️ Mining in progress...";
+
+      if (foundNonce === null && !powRunning) {
+        setPowInfo("PoW: starting...");
+        startPoW(session.challenge);
+      }
+
+      if (remaining <= 0) {
+        canClaimTime = true;
+        $("timer").innerText = "✅ Ready to Claim";
+        setProgress(100);
+
+        if (foundNonce === null) {
+          claimBtn.disabled = true;
+          claimBtn.innerText = "⏳ PoW running...";
+          $("timerLabel").innerText = "Waiting for PoW...";
+        } else {
+          claimBtn.disabled = false;
+          claimBtn.innerText = "💰 Claim Reward";
+          $("timerLabel").innerText = "Click the Claim button";
+        }
+      } else {
+        canClaimTime = false;
+        claimBtn.disabled = true;
+        claimBtn.innerText = "💰 Claim Reward";
+        $("timerLabel").innerText = "Mining time remaining";
+        updateTimer();
+      }
+
+    } else {
+      if (!cachedMinerAllowed) {
+        startBtn.disabled = true;
+        startBtn.innerText = "🔒 Not Whitelisted";
+      } else {
+        startBtn.disabled = false;
+        startBtn.innerText = "🔄 Mine Again";
+      }
+      claimBtn.disabled = true;
+      claimBtn.innerText = "💰 Claim Reward";
+      $("timer").innerText = "✅ Done";
+      $("timerLabel").innerText = "Click Start for the next cycle";
+      setProgress(100);
+      canClaimTime = false;
+    }
+  } catch (e) {
+    console.error("updateUI error:", e);
+  }
+}
+
+// ==================================================
+// LOCAL TIMER
+// ==================================================
+function updateTimer() {
+  if (!userAddress) return;
+  if (sessionStartTime === 0) return;
+
+  var now = Math.floor(Date.now() / 1000) + serverOffset;
+  var elapsed = now - sessionStartTime;
+  var sec = sessionDuration - elapsed;
+
+  var claimBtn = $("claimBtn");
+
+  if (sec <= 0) {
+    $("timer").innerText = "✅ Ready to Claim";
+    setProgress(100);
+    canClaimTime = true;
+
+    if (foundNonce !== null) {
+      if (claimBtn) {
+        claimBtn.disabled = false;
+        claimBtn.innerText = "💰 Claim Reward";
+      }
+      $("timerLabel").innerText = "Click the Claim button below";
+    } else {
+      if (claimBtn) {
+        claimBtn.disabled = true;
+        claimBtn.innerText = "⏳ PoW running...";
+      }
+      $("timerLabel").innerText = "Waiting for PoW...";
+    }
+    return;
+  }
+
+  canClaimTime = false;
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = sec % 60;
+  $("timer").innerText = p2(h) + ":" + p2(m) + ":" + p2(s);
+
+  setProgress((elapsed / sessionDuration) * 100);
+
+  if (claimBtn && !claimBtn.disabled) {
+    claimBtn.disabled = true;
+  }
+}
+
+// ==================================================
+// PoW BRUTE FORCE
+// ==================================================
+function startPoW(challenge) {
+  if (powRunning || foundNonce !== null) return;
+  powRunning = true;
+
+  var MAX_UINT = (1n << 256n) - 1n;
+  var target = MAX_UINT / cachedDifficulty;
+
+  var nonce = 0;
+  var hashCount = 0;
+  var startTime = Date.now();
+  var batch = 500;
+
+  function tick() {
+    if (foundNonce !== null) { powRunning = false; return; }
+
+    for (var i = 0; i < batch; i++) {
+      var hash = ethers.utils.solidityKeccak256(
+        ["bytes32", "address", "uint256"],
+        [challenge, userAddress, nonce]
+      );
+      hashCount++;
+      if (BigInt(hash) < target) {
+        foundNonce = nonce;
+        setPowInfo("✅ PoW complete! Nonce: " + nonce.toLocaleString("en-US"));
+        powRunning = false;
+
+        var cb = $("claimBtn");
+        if (cb) {
+          if (canClaimTime) {
+            cb.disabled = false;
+            cb.innerText = "💰 Claim Reward";
+            $("timerLabel").innerText = "Click the Claim button";
+          } else {
+            cb.disabled = true;
+            cb.innerText = "⏳ Waiting for timer...";
+            $("timerLabel").innerText = "PoW done, waiting for timer";
+          }
+        }
+        return;
+      }
+      nonce++;
+    }
+
+    var elapsed = (Date.now() - startTime) / 1000;
+    var rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
+    setPowInfo(
+      "PoW: " + hashCount.toLocaleString("en-US") + " hash · " +
+      rate.toLocaleString("en-US") + " H/s · nonce " + nonce.toLocaleString("en-US")
+    );
+    setTimeout(tick, 0);
+  }
+  tick();
+}
+
+// ==================================================
+// PAY FEE — gas limit manual biar cepat
+// ==================================================
+async function handlePayFee() {
+  if (isWorking) return;
+  isWorking = true;
+  try {
+    if (!cachedMinerFeeEnabled) {
+      setStatus("ℹ️ Entry fee is currently off. You can mine right away.", "info");
+      return;
+    }
+    if (cachedMinerAuthorized) {
+      setStatus("✅ You are already registered as a miner.", "success");
+      return;
+    }
+    if (cachedMinerFee <= 0n) {
+      setStatus("⚠️ Fee is 0 but you are not whitelisted.", "error");
+      return;
+    }
+
+    if (!confirm("Pay " + fmtEth(cachedMinerFee) + " ETH to register as a miner?\n\nOne-time, non-refundable.")) {
+      return;
+    }
+
+    setStatus("⏳ Sending transaction...", "info");
+
+    var tx = await contract.addMiner(userAddress, {
+      value: cachedMinerFee,
+      gasLimit: GAS_LIMIT_ADD_MINER
+    });
+
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    cachedMinerAuthorized = true;
+    cachedMinerAllowed = true;
+
+    setStatus("🎉 Successfully registered! Click <b>Start Mining</b>.", "success");
+
+    // Fast UI update — pakai cache dulu, sync di background
+    $("minerAuthStatus").innerHTML = '<span class="badge ok">AUTHORIZED</span>';
+    $("minerAllowedStatus").innerHTML = '<span class="badge ok">YES</span>';
+    $("payFeeWrap").classList.add("hidden");
+
+    var startBtn = $("startBtn");
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.innerText = "▶️ Start Mining";
+    }
+    $("timerLabel").innerText = "Ready to start";
+
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+}
+
+// ==================================================
+// START MINING — gas limit manual, no estimateGas
+// ==================================================
+async function handleStartMining() {
+  if (isWorking) return;
+  isWorking = true;
+  try {
+    if (!cachedMinerAllowed) {
+      setStatus("🔒 You are not registered as a miner. Pay the fee first.", "error");
+      return;
+    }
+
+    setStatus("⏳ Sending transaction...", "info");
+    foundNonce = null;
+    powRunning = false;
+    canClaimTime = false;
+    setPowInfo("PoW: idle");
+    setProgress(0);
+
+    var clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+    var tx = await contract.startMining(clientSeed, {
+      gasLimit: GAS_LIMIT_START_MINING
+    });
+
+    setStatus("⏳ Waiting for confirmation...", "info");
+    var receipt = await tx.wait();
+
+    var challenge = null;
+    for (var i = 0; i < receipt.logs.length; i++) {
+      try {
+        var parsed = contract.interface.parseLog(receipt.logs[i]);
+        if (parsed.name === "MiningStarted") {
+          challenge = parsed.args.challenge;
+          break;
+        }
+      } catch (x) {}
+    }
+    if (!challenge) {
+      var session = await safeCall(function() { return contract.sessions(userAddress); }, null);
+      if (session) challenge = session.challenge;
+    }
+
+    cachedChallenge = challenge;
+    setStatus("✅ Mining started! Wait " + (sessionDuration / 3600) + " hours.", "success");
+
+    // Background refresh
+    syncServerTime().catch(function() {});
+    updateUI();
+
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+}
+
+// ==================================================
+// CLAIM
+// ==================================================
+async function handleClaim() {
+  if (isWorking) return;
+
+  if (!canClaimTime) {
+    setStatus("⏳ Wait for the timer to finish first.", "error");
+    return;
+  }
+  if (foundNonce === null) {
+    setStatus("⏳ Waiting for PoW to complete...", "error");
+    return;
+  }
+
+  isWorking = true;
+  try {
+    setStatus("⏳ Sending transaction...", "info");
+
+    var tx = await contract.claim(foundNonce, {
+      gasLimit: GAS_LIMIT_CLAIM
+    });
+
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus(
+      "🎉 Reward added to mined balance!<br>" +
+      "Withdraw to wallet once it reaches ≥ " + fmtLUX(cachedMinClaim) + " LUX.",
+      "success"
+    );
+    foundNonce = null;
+    powRunning = false;
+    cachedChallenge = null;
+    canClaimTime = false;
+    sessionStartTime = 0;
+    setPowInfo("PoW: idle");
+    setProgress(0);
+
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+}
+
+// ==================================================
+// WITHDRAW
+// ==================================================
+async function handleWithdraw() {
+  if (isWorking) return;
+  isWorking = true;
+  try {
+    if (cachedPendingBalance < cachedMinClaim) {
+      setStatus("⚠️ Balance below minimum " + fmtLUX(cachedMinClaim) + " LUX.", "error");
+      return;
+    }
+
+    if (!confirm("Withdraw " + fmtLUX(cachedPendingBalance) + " LUX to your wallet?")) return;
+
+    setStatus("⏳ Sending transaction...", "info");
+
+    var tx = await contract.claimToWallet({
+      gasLimit: GAS_LIMIT_WITHDRAW
+    });
+
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus("🎉 Success! LUX sent to your wallet.", "success");
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+}
+
+// ==================================================
+// BIND EVENTS
+// ==================================================
+function bindEventListeners() {
+  var btn = $("connectBtn");
+  if (btn) btn.addEventListener("click", function(e) { e.preventDefault(); doConnect(); });
+
+  var sw = $("switchNetBtn");
+  if (sw) sw.addEventListener("click", async function(e) {
+    e.preventDefault();
+    try {
+      setStatus("⏳ Switching to Sepolia...", "info");
+      await ensureSepolia();
+      await doConnect();
+    } catch (err) {
+      setStatus("❌ " + decodeError(err), "error");
+    }
+  });
+
+  var sb = $("startBtn");
+  if (sb) sb.addEventListener("click", function(e) { e.preventDefault(); handleStartMining(); });
+
+  var cb = $("claimBtn");
+  if (cb) cb.addEventListener("click", function(e) { e.preventDefault(); handleClaim(); });
+
+  var pb = $("payFeeBtn");
+  if (pb) pb.addEventListener("click", function(e) { e.preventDefault(); handlePayFee(); });
+
+  var wb = $("withdrawBtn");
+  if (wb) wb.addEventListener("click", function(e) { e.preventDefault(); handleWithdraw(); });
+}
+
+// ==================================================
+// WALLET EVENTS
+// ==================================================
+function bindWalletListeners() {
+  if (!window.ethereum || window.__luxListenersBound) return;
+  window.__luxListenersBound = true;
+
+  window.ethereum.on("accountsChanged", function(accs) {
+    if (!accs || accs.length === 0) {
+      setStatus("🔒 Wallet disconnected", "error");
+      $("connectBtn").style.display = "block";
+      ["statsCard", "minerCard", "miningCard", "pendingCard"].forEach(function(id) {
+        $(id).classList.add("hidden");
+      });
+      if (timerInterval) clearInterval(timerInterval);
+      if (syncInterval) clearInterval(syncInterval);
+      return;
+    }
+    doConnect();
+  });
+
+  window.ethereum.on("chainChanged", function(hex) {
+    var id = parseInt(hex, 16);
+    if (id === SEPOLIA_CHAIN_ID_DEC) {
+      doConnect();
+    } else {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Moved from Sepolia. Click Switch to Sepolia.", "error");
+    }
+  });
+}
+
+// ==================================================
+// INIT
+// ==================================================
+async function init() {
+  bindEventListeners();
+
+  if (typeof ethers === "undefined") {
+    setStatus("❌ ethers library failed to load.", "error");
+    return;
+  }
+
+  if (!hasInjectedWallet()) {
+    if (isMobile()) {
+      var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
+      setStatus(
+        '💡 Open this page in <b>MetaMask Browser</b> to connect your wallet.<br><br>' +
+        '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
+        'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;">' +
+        '🦊 Open in MetaMask</a>',
+        "info"
+      );
+    } else {
+      setStatus("💡 Install MetaMask to connect your wallet.", "info");
+    }
+    return;
+  }
+
+  bindWalletListeners();
+
+  try {
+    var accs = await window.ethereum.request({ method: "eth_accounts" });
+    var chain = await window.ethereum.request({ method: "eth_chainId" });
+
+    if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Wrong network. Click the switch button above.", "error");
+      if (accs && accs.length > 0) userAddress = accs[0];
+      return;
+    }
+
+    if (accs && accs.length > 0) {
+      doConnect();
+    } else {
+      setStatus("👋 Click <b>Connect Wallet</b> to get started.", "");
+    }
+  } catch (e) {
+    console.error("Auto reconnect error:", e);
+    setStatus("👋 Click <b>Connect Wallet</b> to get started.", "");
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
