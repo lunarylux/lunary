@@ -144,11 +144,6 @@
     color: var(--gold); margin-bottom: 12px; line-height: 1.5;
   }
   .warn-box code { color: #fff; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
-  .info-box {
-    background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.3);
-    border-radius: 10px; padding: 12px 14px; font-size: 12.5px;
-    color: var(--secondary); margin-bottom: 12px; line-height: 1.5;
-  }
 </style>
 </head>
 <body>
@@ -163,7 +158,6 @@
   </div>
 
   <div id="warnBox" class="warn-box hidden"></div>
-  <div id="infoBox" class="info-box hidden"></div>
 
   <button id="connectBtn">🔌 Connect Wallet</button>
 
@@ -310,6 +304,7 @@ let provider, signer, contract, userAddress, ownerAddress;
 let contractVersion = "new";
 let isOwner = false;
 let isWorking = false;
+let isConnecting = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -366,12 +361,59 @@ function decodeError(e) {
 }
 
 // ==================================================
+// SWITCH / ADD SEPOLIA (TANPA RELOAD)
+// ==================================================
+async function ensureSepolia() {
+  const current = await window.ethereum.request({ method: "eth_chainId" });
+  if (current.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }],
+    });
+  } catch (err) {
+    if (err.code === 4902 || err.code === -32603) {
+      // chain belum ada, coba tambah
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: SEPOLIA_CHAIN_ID_HEX,
+            chainName: "Sepolia Testnet",
+            nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://rpc.sepolia.org", "https://sepolia.drpc.org"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"],
+          }],
+        });
+      } catch (addErr) {
+        if (addErr.code === 4001) throw new Error("Kamu menolak menambahkan Sepolia");
+        throw new Error("Gagal tambah Sepolia: " + (addErr.message || addErr));
+      }
+    } else if (err.code === 4001) {
+      throw new Error("Kamu menolak switch ke Sepolia");
+    } else {
+      throw new Error("Gagal switch: " + (err.message || err));
+    }
+  }
+
+  // tunggu chain benar-benar berubah (max 5 detik)
+  const start = Date.now();
+  while (Date.now() - start < 5000) {
+    const c = await window.ethereum.request({ method: "eth_chainId" });
+    if (c.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  throw new Error("Timeout: MetaMask tidak pindah ke Sepolia");
+}
+
+// ==================================================
 // DETEKSI VERSI KONTRAK
 // ==================================================
 async function detectContractVersion(prov) {
   const code = await prov.getCode(CONTRACT_ADDRESS);
   if (!code || code === "0x") {
-    throw new Error("Tidak ada kontrak di alamat " + CONTRACT_ADDRESS + " di Sepolia.");
+    throw new Error("Tidak ada kontrak di alamat " + CONTRACT_ADDRESS);
   }
   const ifaceNew = new ethers.utils.Interface(ABI_NEW);
   const data = ifaceNew.encodeFunctionData("getMiningConfig", []);
@@ -383,9 +425,11 @@ async function detectContractVersion(prov) {
 }
 
 // ==================================================
-// CONNECT WALLET
+// CONNECT CORE (dipanggil dari tombol & event)
 // ==================================================
-$("connectBtn").onclick = async () => {
+async function doConnect() {
+  if (isConnecting) return;
+  isConnecting = true;
   try {
     setStatus("🔍 Memeriksa MetaMask...", "info");
 
@@ -394,73 +438,56 @@ $("connectBtn").onclick = async () => {
       return;
     }
 
-    // Handle multiple providers
+    // handle multiple providers
     if (window.ethereum.providers && window.ethereum.providers.length > 1) {
       const mm = window.ethereum.providers.find(p => p.isMetaMask);
       if (mm) window.ethereum = mm;
     }
 
-    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-
+    // ===== 1. REQUEST ACCOUNT =====
     setStatus("🔓 Meminta akses akun...", "info");
-    const accounts = await provider.send("eth_requestAccounts", []);
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     if (!accounts || accounts.length === 0) {
       setStatus("❌ Tidak ada akun yang dipilih", "error");
       return;
     }
     userAddress = accounts[0];
 
-    // Cek chain
-    const network = await provider.getNetwork();
-    if (Number(network.chainId) !== SEPOLIA_CHAIN_ID_DEC) {
+    // ===== 2. ENSURE SEPOLIA =====
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
       setStatus("⚠️ Bukan Sepolia. Meminta switch...", "error");
       try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }],
-        });
-        setTimeout(() => location.reload(), 800);
-        return;
+        await ensureSepolia();
       } catch (switchErr) {
-        if (switchErr.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [{
-                chainId: SEPOLIA_CHAIN_ID_HEX,
-                chainName: "Sepolia Testnet",
-                nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
-                rpcUrls: ["https://rpc.sepolia.org"],
-                blockExplorerUrls: ["https://sepolia.etherscan.io"],
-              }],
-            });
-            setTimeout(() => location.reload(), 800);
-            return;
-          } catch (addErr) {
-            setStatus("❌ Gagal tambah Sepolia: " + decodeError(addErr), "error");
-            return;
-          }
-        }
-        setStatus("❌ Gagal switch network: " + decodeError(switchErr), "error");
+        setStatus("❌ " + switchErr.message, "error");
         return;
       }
     }
 
+    // ===== 3. BUAT PROVIDER & CONTRACT =====
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
     signer = provider.getSigner();
 
-    // Deteksi versi kontrak
+    const net = await provider.getNetwork();
+    if (Number(net.chainId) !== SEPOLIA_CHAIN_ID_DEC) {
+      setStatus("⚠️ Provider masih baca chain lama. Coba klik Connect lagi.", "error");
+      return;
+    }
+
+    // ===== 4. DETEKSI VERSI =====
     setStatus("🔍 Memeriksa kontrak...", "info");
     contractVersion = await detectContractVersion(provider);
     const abi = contractVersion === "new" ? ABI_NEW : ABI_OLD;
     contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
 
-    // Cek owner
+    // ===== 5. CEK OWNER =====
     ownerAddress = await contract.owner();
     isOwner = ownerAddress.toLowerCase() === userAddress.toLowerCase();
 
     if (!isOwner) {
       showWarn(`
-        ⚠️ Wallet kamu <b>bukan owner</b> kontrak. Kamu hanya bisa melihat data.<br><br>
+        ⚠️ Wallet kamu <b>bukan owner</b> kontrak. Hanya bisa melihat data.<br><br>
         Owner: <code>${ownerAddress}</code><br>
         Kamu: <code>${userAddress}</code>
       `);
@@ -473,7 +500,7 @@ $("connectBtn").onclick = async () => {
     }
     $("ownerBadge").classList.remove("hidden");
 
-    // Enable/disable tombol tulis
+    // ===== 6. ENABLE TOMBOL =====
     const writeIds = ["saveFeeBtn", "withdrawBtn", "withdrawAllBtn", "rescueBtn", "pauseBtn", "unpauseBtn", "feeEnabledToggle"];
     writeIds.forEach(id => {
       const el = $(id);
@@ -490,18 +517,18 @@ $("connectBtn").onclick = async () => {
     await loadAllInfo();
     await loadFeeInfo();
 
-    setInterval(async () => {
-      try { await loadAllInfo(); } catch {}
-    }, 15000);
-
-    window.ethereum.on("accountsChanged", () => location.reload());
-    window.ethereum.on("chainChanged", () => location.reload());
-
   } catch (e) {
     console.error("Connect error:", e);
     setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isConnecting = false;
   }
-};
+}
+
+// ==================================================
+// TOMBOL CONNECT
+// ==================================================
+$("connectBtn").onclick = doConnect;
 
 // ==================================================
 // LOAD INFO
@@ -690,7 +717,7 @@ $("rescueBtn").onclick = async () => {
         ? "LUX"
         : token;
 
-    if (!confirm(`Rescue ${amount.toString()} (${tokenLabel}) ke owner?\n\nTindakan ini langsung eksekusi, tanpa delay.`)) return;
+    if (!confirm(`Rescue ${amount.toString()} (${tokenLabel}) ke owner?\n\nLangsung eksekusi, tanpa delay.`)) return;
 
     setStatus("⏳ Rescue...", "info");
     const tx = await contract.createRescue(token, amount);
@@ -753,10 +780,54 @@ $("unpauseBtn").onclick = async () => {
 };
 
 // ==================================================
-// INIT
+// EVENT LISTENER (didaftarkan sekali)
 // ==================================================
-window.addEventListener("load", () => {
-  setStatus("Belum connect");
+if (window.ethereum && !window.__luxListenersBound) {
+  window.__luxListenersBound = true;
+
+  window.ethereum.on("accountsChanged", (accs) => {
+    if (!accs || accs.length === 0) {
+      setStatus("🔒 Wallet disconnected. Klik Connect lagi.", "error");
+      $("connectBtn").style.display = "block";
+      ["infoCard", "feeCard", "withdrawCard", "rescueCard", "pauseCard"].forEach(id => {
+        $(id).classList.add("hidden");
+      });
+      return;
+    }
+    // auto re-connect dengan akun baru
+    doConnect();
+  });
+
+  window.ethereum.on("chainChanged", (chainIdHex) => {
+    const id = parseInt(chainIdHex, 16);
+    if (id === SEPOLIA_CHAIN_ID_DEC) {
+      doConnect(); // balik ke Sepolia, reconnect
+    } else {
+      setStatus("⚠️ Pindah dari Sepolia. Silakan switch kembali ke Sepolia.", "error");
+    }
+  });
+}
+
+// ==================================================
+// AUTO RECONNECT (kalau sudah pernah connect)
+// ==================================================
+window.addEventListener("load", async () => {
+  if (!window.ethereum) {
+    setStatus("Belum connect · Install MetaMask");
+    return;
+  }
+
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    if (accounts && accounts.length > 0) {
+      // sudah pernah connect → auto connect
+      doConnect();
+    } else {
+      setStatus("Belum connect");
+    }
+  } catch {
+    setStatus("Belum connect");
+  }
 });
 </script>
 </body>
