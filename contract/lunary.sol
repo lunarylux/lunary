@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts@5.0.2/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts@5.0.2/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts@5.0.2/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts@5.0.2/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts@5.0.2/utils/Pausable.sol";
+import "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
 
 /**
  * @title Lunary (LUX)
  * @notice Fair launch PoW mining token with 4x halving.
  *         Decimals 8, max supply 112,333.
  */
-contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
+contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
     // ============ TOKEN CONSTANTS ============
@@ -34,13 +34,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     uint256 public constant DEFAULT_MINER_FEE = 1 ether;
 
     // ============ MIN CLAIM TO WALLET ============
-    // Base minimum: 20 LUX at epoch 0.
-    // Actual value halves with each epoch:
-    //   Epoch 0: 20 LUX
-    //   Epoch 1: 10 LUX
-    //   Epoch 2: 5 LUX
-    //   Epoch 3: 2.5 LUX
-    //   Epoch 4+: 1.25 LUX
     uint256 public constant BASE_MIN_CLAIM = 20 * 10**_DECIMALS;
 
     // ============ STATE ============
@@ -93,7 +86,10 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     event WithdrawnToWallet(address indexed user, uint256 amount);
 
     // ============ CONSTRUCTOR ============
-    constructor() ERC20("Lunary", "LUX") Ownable(msg.sender) {
+    constructor()
+        ERC20("Lunary", "LUX")
+        Ownable(msg.sender)
+    {
         minerFeeEnabled = true;
         minerFee = DEFAULT_MINER_FEE;
         feeRecipient = msg.sender;
@@ -115,8 +111,6 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         return TOKENS_PER_CLAIM >> halvings;
     }
 
-    /// @notice Minimum LUX required to withdraw mined balance to wallet.
-    ///         Halves automatically with each epoch.
     function minClaimAmount() public view returns (uint256) {
         uint256 halvings = currentEpoch();
         if (halvings >= MAX_HALVINGS) {
@@ -185,8 +179,12 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         require(currentReward() > 0, "Mining finished");
         require(totalMined < MAX_SUPPLY, "Max supply reached");
 
+        // Safe: block.number >= 1 pada semua chain produksi.
+        // Gunakan blockhash(block.number - 1) hanya jika block.number > 0.
+        bytes32 prevHash = block.number > 0 ? blockhash(block.number - 1) : bytes32(0);
+
         bytes32 challenge = keccak256(abi.encodePacked(
-            blockhash(block.number - 1),
+            prevHash,
             msg.sender,
             clientSeed,
             block.timestamp
