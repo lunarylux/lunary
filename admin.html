@@ -554,4 +554,651 @@ async function doConnect() {
       "rescueBtn", "executeRescueBtn", "cancelRescueBtn",
       "pauseBtn", "unpauseBtn"
     ];
-    writeIds
+    writeIds.forEach(id => {
+      const el = $(id);
+      if (el) el.disabled = !isOwner;
+    });
+
+    $("connectBtn").style.display = "none";
+    ["infoCard", "feeCard", "minerCard", "withdrawCard", "rescueCard", "pauseCard"].forEach(id => {
+      $(id).classList.remove("hidden");
+    });
+
+    setStatus(`✅ Connected sebagai ${isOwner ? "OWNER" : "viewer"}`, "success");
+
+    await Promise.all([loadAllInfo(), loadFeeInfo(), loadRescueList()]);
+  } catch (e) {
+    console.error("Connect error:", e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isConnecting = false;
+  }
+}
+
+$("connectBtn").onclick = doConnect;
+
+// ==================================================
+// LOAD INFO
+// ==================================================
+async function loadAllInfo() {
+  if (!contract) return;
+  try {
+    const [
+      reward, epoch, mined, totalClaims, max, paused,
+      polBal, luxBal, pending, minClaim,
+      luxAvailable, authMiners, accumulated
+    ] = await Promise.all([
+      contract.currentReward(),
+      contract.currentEpoch(),
+      contract.totalMined(),
+      contract.totalClaims().catch(() => 0),
+      contract.MAX_SUPPLY(),
+      contract.paused().catch(() => false),
+      contract.getTreasuryBalance().catch(() => ethers.BigNumber.from(0)),
+      contract.getLUXBalance().catch(() => ethers.BigNumber.from(0)),
+      contract.totalPendingClaims().catch(() => ethers.BigNumber.from(0)),
+      contract.MIN_CLAIM_AMOUNT().catch(() => ethers.BigNumber.from(0)),
+      contract.getAvailableLUXForRescue().catch(() => ethers.BigNumber.from(0)),
+      contract.totalAuthorizedMiners().catch(() => 0),
+      contract.accumulatedFees().catch(() => ethers.BigNumber.from(0))
+    ]);
+
+    $("infoAddress").innerText = shortAddr(CONTRACT_ADDRESS);
+    $("infoOwner").innerText = shortAddr(ownerAddress);
+    $("infoUser").innerText = shortAddr(userAddress);
+    $("infoReward").innerText = fmtLUX(reward) + " LUX";
+    $("infoEpoch").innerText = epoch.toString() + ` (${totalClaims} claims)`;
+    $("infoMined").innerText = fmtLUX(mined) + " LUX";
+    $("infoMax").innerText = fmtLUX(max) + " LUX";
+    $("infoPending").innerText = fmtLUX(pending) + " LUX";
+    $("infoMinClaim").innerText = fmtLUX(minClaim) + " LUX";
+    $("infoAuthMiners").innerText = authMiners.toString();
+    $("infoPaused").innerHTML = paused
+      ? '<span style="color:var(--danger)">PAUSED</span>'
+      : '<span style="color:var(--success)">AKTIF</span>';
+    $("infoPolBal").innerText = fmtEth(polBal) + " ETH";
+    $("infoLuxBal").innerText = fmtLUX(luxBal) + " LUX";
+    $("infoLuxAvailable").innerText = fmtLUX(luxAvailable) + " LUX";
+    $("pauseStatus").innerHTML = paused
+      ? '<span style="color:var(--danger)">PAUSED</span>'
+      : '<span style="color:var(--success)">AKTIF</span>';
+
+    // withdraw card
+    $("wPolBal").innerText = fmtEth(accumulated) + " ETH";
+    $("wTotalPolBal").innerText = fmtEth(polBal) + " ETH";
+  } catch (e) {
+    console.error("loadAllInfo error:", e);
+  }
+}
+
+// ==================================================
+// LOAD FEE INFO
+// ==================================================
+async function loadFeeInfo() {
+  if (!contract) return;
+  try {
+    const [enabled, fee, recip, accum, totalAuth] = await Promise.all([
+      contract.minerFeeEnabled(),
+      contract.minerFee(),
+      contract.feeRecipient(),
+      contract.accumulatedFees(),
+      contract.totalAuthorizedMiners()
+    ]);
+    cachedMinerFee = fee;
+    cachedFeeEnabled = enabled;
+
+    $("feeEnabledToggle").checked = enabled;
+    $("feeCurrent").innerText = enabled
+      ? fmtEth(fee) + " ETH" + (fee.eq(0) ? " (gratis)" : "")
+      : "Nonaktif";
+    $("feeAccumulated").innerText = fmtEth(accum) + " ETH";
+    $("feeRecipient").innerText = shortAddr(recip);
+    if ($("feeRecipientInput").value === "") $("feeRecipientInput").value = recip;
+
+    $("minerFeeInfo").innerText = fmtEth(fee) + " ETH";
+    $("minerFeeStatusInfo").innerText = enabled ? "AKTIF (whitelist)" : "OFF (bebas)";
+    $("infoAuthMiners").innerText = totalAuth.toString();
+
+    if ($("withdrawTo").placeholder.includes("kosongkan")) {
+      // tetap
+    }
+  } catch (e) {
+    console.error("loadFeeInfo error:", e);
+  }
+}
+
+// ==================================================
+// FEE PRESET
+// ==================================================
+document.querySelectorAll("[data-fee]").forEach(btn => {
+  btn.onclick = () => { $("feeAmountInput").value = btn.dataset.fee; };
+});
+
+// ==================================================
+// SAVE FEE (nominal & toggle)
+// ==================================================
+$("saveFeeBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const enabled = $("feeEnabledToggle").checked;
+    const amountStr = $("feeAmountInput").value.trim();
+
+    let amount;
+    if (amountStr === "") {
+      amount = cachedMinerFee;
+    } else {
+      const n = Number(amountStr);
+      if (!isFinite(n) || n < 0) throw new Error("Nominal tidak valid");
+      amount = ethers.utils.parseEther(amountStr);
+    }
+
+    setStatus("⏳ Menyimpan perubahan fee...", "info");
+
+    // Update nominal dulu (jika berubah)
+    if (!amount.eq(cachedMinerFee)) {
+      const tx1 = await contract.setMinerFee(amount);
+      setStatus("⏳ Menunggu konfirmasi setMinerFee...", "info");
+      await tx1.wait();
+    }
+    // Update toggle
+    if (enabled !== cachedFeeEnabled) {
+      const tx2 = await contract.setMinerFeeEnabled(enabled);
+      setStatus("⏳ Menunggu konfirmasi setMinerFeeEnabled...", "info");
+      await tx2.wait();
+    }
+
+    setStatus(`✅ Fee diubah: ${enabled ? fmtEth(amount) + " ETH" : "Nonaktif"}`, "success");
+    $("feeAmountInput").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// SAVE FEE RECIPIENT
+// ==================================================
+$("saveFeeRecipientBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const to = $("feeRecipientInput").value.trim();
+    if (!ethers.utils.isAddress(to)) throw new Error("Alamat tidak valid");
+
+    setStatus("⏳ Mengubah fee recipient...", "info");
+    const tx = await contract.setFeeRecipient(to);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Fee recipient → ${shortAddr(to)}`, "success");
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// ADD MINER (single)
+// ==================================================
+$("addMinerBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const addr = $("addMinerAddress").value.trim();
+    if (!ethers.utils.isAddress(addr)) throw new Error("Address miner tidak valid");
+
+    const already = await contract.authorizedMiners(addr);
+    if (already) throw new Error("Address sudah authorized");
+
+    const enabled = await contract.minerFeeEnabled();
+    const fee = await contract.minerFee();
+    const value = enabled ? fee : ethers.BigNumber.from(0);
+
+    const feeLabel = enabled
+      ? `${fmtEth(fee)} ETH`
+      : "0 ETH (fee OFF)";
+
+    if (!confirm(`Add miner:\n${addr}\n\nFee: ${feeLabel}\n\nLanjutkan?`)) return;
+
+    setStatus("⏳ Menambahkan miner...", "info");
+    const tx = await contract.addMiner(addr, { value });
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Miner ditambahkan: ${shortAddr(addr)}`, "success");
+    $("addMinerAddress").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// ADD MINER BATCH
+// ==================================================
+$("addMinerBatchBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const raw = $("addMinerAddress").value.trim();
+    if (raw === "") throw new Error("Isi input dengan daftar address (dipisah koma)");
+
+    const list = raw.split(",").map(s => s.trim()).filter(s => s !== "");
+    if (list.length === 0) throw new Error("Tidak ada address");
+    for (const a of list) {
+      if (!ethers.utils.isAddress(a)) throw new Error("Address tidak valid: " + a);
+    }
+
+    const enabled = await contract.minerFeeEnabled();
+    const fee = await contract.minerFee();
+    const value = enabled ? fee.mul(list.length) : ethers.BigNumber.from(0);
+    const totalLabel = enabled ? `${fmtEth(value)} ETH` : "0 ETH (fee OFF)";
+
+    if (!confirm(`Batch add ${list.length} miner:\n\nTotal fee: ${totalLabel}\n\nLanjutkan?`)) return;
+
+    setStatus(`⏳ Menambahkan ${list.length} miner...`, "info");
+    const tx = await contract.addMinerBatch(list, { value });
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Batch add selesai (${list.length} address)`, "success");
+    $("addMinerAddress").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// CHECK MINER
+// ==================================================
+$("checkMinerBtn").onclick = async () => {
+  if (!contract) return;
+  try {
+    const addr = $("checkMinerAddress").value.trim();
+    if (!ethers.utils.isAddress(addr)) throw new Error("Address tidak valid");
+
+    const [authorized, allowed, minedBal, canWd, needed] = await Promise.all([
+      contract.authorizedMiners(addr),
+      contract.isMinerAllowed(addr),
+      contract.getMinedBalance(addr),
+      contract.canWithdraw(addr),
+      contract.amountNeededToWithdraw(addr)
+    ]);
+
+    const el = $("minerCheckResult");
+    el.classList.remove("hidden");
+    el.innerHTML = `
+      <b>${addr}</b><br>
+      Authorized: <code>${authorized ? "YES" : "NO"}</code><br>
+      Allowed to mine: <code>${allowed ? "YES" : "NO"}</code><br>
+      Mined balance: <code>${fmtLUX(minedBal)} LUX</code><br>
+      Can withdraw: <code>${canWd ? "YES" : "NO"}</code><br>
+      Needed to withdraw: <code>${fmtLUX(needed)} LUX</code>
+    `;
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  }
+};
+
+// ==================================================
+// REMOVE MINER
+// ==================================================
+$("removeMinerBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const addr = $("removeMinerAddress").value.trim();
+    if (!ethers.utils.isAddress(addr)) throw new Error("Address tidak valid");
+
+    if (!confirm(`Remove miner: ${addr}?\n(Tidak ada refund)`)) return;
+
+    setStatus("⏳ Remove miner...", "info");
+    const tx = await contract.removeMiner(addr);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Miner dihapus: ${shortAddr(addr)}`, "success");
+    $("removeMinerAddress").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// WITHDRAW FEES (ke feeRecipient)
+// ==================================================
+$("withdrawFeesBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const accum = await contract.accumulatedFees();
+    if (accum.lte(0)) throw new Error("Belum ada fee terkumpul");
+
+    const recip = await contract.feeRecipient();
+    if (!confirm(`Withdraw ${fmtEth(accum)} ETH ke feeRecipient (${recip})?`)) return;
+
+    setStatus("⏳ Withdraw fees...", "info");
+    const tx = await contract.withdrawFees();
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ ${fmtEth(accum)} ETH terkirim ke ${shortAddr(recip)}`, "success");
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// WITHDRAW FEES TO (custom address)
+// ==================================================
+$("withdrawFeesToBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const to = $("withdrawTo").value.trim();
+    if (!ethers.utils.isAddress(to)) throw new Error("Alamat tujuan tidak valid");
+
+    const accum = await contract.accumulatedFees();
+    if (accum.lte(0)) throw new Error("Belum ada fee terkumpul");
+
+    if (!confirm(`Withdraw ${fmtEth(accum)} ETH ke ${to}?`)) return;
+
+    setStatus("⏳ Withdraw fees to...", "info");
+    const tx = await contract.withdrawFeesTo(to);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ ${fmtEth(accum)} ETH terkirim ke ${shortAddr(to)}`, "success");
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// RESCUE — CREATE
+// ==================================================
+$("rescueBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const tokenStr = $("rescueToken").value.trim();
+    const amtStr = $("rescueAmount").value.trim();
+
+    if (amtStr === "") throw new Error("Jumlah belum diisi");
+
+    let token = ethers.constants.AddressZero;
+    if (tokenStr !== "") {
+      if (!ethers.utils.isAddress(tokenStr)) throw new Error("Token address tidak valid");
+      token = tokenStr;
+    }
+
+    let amount;
+    try { amount = ethers.BigNumber.from(amtStr); }
+    catch { throw new Error("Jumlah tidak valid (harus angka bulat/wei)"); }
+    if (amount.lte(0)) throw new Error("Jumlah harus > 0");
+
+    const tokenLabel = token === ethers.constants.AddressZero
+      ? "POL"
+      : token.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()
+        ? "LUX"
+        : token;
+
+    if (!confirm(
+      `Buat request rescue:\n\nToken: ${tokenLabel}\nJumlah: ${amount.toString()}\n\n` +
+      `Akan tersedia untuk execute setelah 24 jam.`
+    )) return;
+
+    setStatus("⏳ Membuat rescue request...", "info");
+    const tx = await contract.createRescue(token, amount);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    const receipt = await tx.wait();
+
+    // Coba ambil rescue id dari event
+    let rescueId = "-";
+    try {
+      const iface = contract.interface;
+      for (const log of receipt.logs) {
+        try {
+          const parsed = iface.parseLog(log);
+          if (parsed && parsed.name === "RescueCreated") {
+            rescueId = parsed.args.id;
+            break;
+          }
+        } catch {}
+      }
+    } catch {}
+
+    setStatus(`✅ Rescue dibuat. ID: ${rescueId}`, "success");
+    $("rescueAmount").value = "";
+    if (rescueId !== "-") $("executeRescueId").value = rescueId;
+    await Promise.all([loadRescueList(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// RESCUE — LIST
+// ==================================================
+async function loadRescueList() {
+  if (!contract) return;
+  const listEl = $("rescueList");
+  try {
+    const ids = await contract.getRescueIds();
+    if (!ids || ids.length === 0) {
+      listEl.innerHTML = '<span class="label" style="font-size:12px;">Belum ada request.</span>';
+      return;
+    }
+
+    let html = "";
+    // Batasi tampil 10 terakhir
+    const start = Math.max(0, ids.length - 10);
+    for (let i = ids.length - 1; i >= start; i--) {
+      const id = ids[i];
+      const r = await contract.rescues(id);
+      const tokenLabel = r.token === ethers.constants.AddressZero
+        ? "POL"
+        : r.token.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()
+          ? "LUX"
+          : shortAddr(r.token);
+
+      const now = Math.floor(Date.now() / 1000);
+      const ready = Number(r.executeAfter) <= now;
+      const status = r.executed
+        ? '<span style="color:#888">EXECUTED/CANCELLED</span>'
+        : ready
+          ? '<span style="color:var(--success)">SIAP EXECUTE</span>'
+          : `<span style="color:var(--gold)">Tunggu (${new Date(Number(r.executeAfter) * 1000).toLocaleString("id-ID")})</span>`;
+
+      html += `
+        <div class="rescue-item">
+          <b>ID:</b> <code>${shortId(id)}</code><br>
+          <b>Token:</b> <code>${tokenLabel}</code><br>
+          <b>Jumlah:</b> <code>${r.amount.toString()}</code><br>
+          <b>Status:</b> ${status}<br>
+          <button class="btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;"
+            onclick="document.getElementById('executeRescueId').value='${id}'">
+            Pakai ID ini
+          </button>
+        </div>
+      `;
+    }
+    listEl.innerHTML = html;
+  } catch (e) {
+    console.error("loadRescueList error:", e);
+  }
+}
+
+// ==================================================
+// RESCUE — EXECUTE
+// ==================================================
+$("executeRescueBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const id = $("executeRescueId").value.trim();
+    if (!id.startsWith("0x") || id.length !== 66) throw new Error("Rescue ID tidak valid");
+
+    if (!confirm(`Execute rescue ${id}?`)) return;
+
+    setStatus("⏳ Execute rescue...", "info");
+    const tx = await contract.executeRescue(id);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Rescue executed: ${shortId(id)}`, "success");
+    await Promise.all([loadRescueList(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// RESCUE — CANCEL
+// ==================================================
+$("cancelRescueBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const id = $("executeRescueId").value.trim();
+    if (!id.startsWith("0x") || id.length !== 66) throw new Error("Rescue ID tidak valid");
+
+    if (!confirm(`Cancel rescue ${id}?`)) return;
+
+    setStatus("⏳ Cancel rescue...", "info");
+    const tx = await contract.cancelRescue(id);
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Rescue cancelled: ${shortId(id)}`, "success");
+    await Promise.all([loadRescueList(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// PAUSE / UNPAUSE
+// ==================================================
+$("pauseBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    setStatus("⏳ Pause mining...", "info");
+    const tx = await contract.pause();
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+    setStatus("✅ Mining di-pause", "success");
+    await loadAllInfo();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+$("unpauseBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    setStatus("⏳ Unpause mining...", "info");
+    const tx = await contract.unpause();
+    setStatus("⏳ Menunggu konfirmasi...", "info");
+    await tx.wait();
+    setStatus("✅ Mining aktif kembali", "success");
+    await loadAllInfo();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// EVENT LISTENER
+// ==================================================
+if (window.ethereum && !window.__luxListenersBound) {
+  window.__luxListenersBound = true;
+
+  window.ethereum.on("accountsChanged", (accs) => {
+    if (!accs || accs.length === 0) {
+      setStatus("🔒 Wallet disconnected. Klik Connect lagi.", "error");
+      $("connectBtn").style.display = "block";
+      ["infoCard", "feeCard", "minerCard", "withdrawCard", "rescueCard", "pauseCard"].forEach(id => {
+        $(id).classList.add("hidden");
+      });
+      return;
+    }
+    doConnect();
+  });
+
+  window.ethereum.on("chainChanged", (chainIdHex) => {
+    const id = parseInt(chainIdHex, 16);
+    if (id === SEPOLIA_CHAIN_ID_DEC) {
+      doConnect();
+    } else {
+      setStatus("⚠️ Pindah dari Sepolia. Silakan switch kembali ke Sepolia.", "error");
+    }
+  });
+}
+
+// ==================================================
+// AUTO RECONNECT
+// ==================================================
+window.addEventListener("load", async () => {
+  if (!window.ethereum) {
+    setStatus("Belum connect · Install MetaMask");
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    if (accounts && accounts.length > 0) {
+      doConnect();
+    } else {
+      setStatus("Belum connect");
+    }
+  } catch {
+    setStatus("Belum connect");
+  }
+});
+</script>
+</body>
+</html>
