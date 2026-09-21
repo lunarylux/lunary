@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Lunary (LUX)
- * @notice Fair launch PoW mining token with 4x halving, no tax.
+ * @notice Fair launch PoW mining token with 4x halving.
  *         Decimals 8, max supply 112,333.
  */
 contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
