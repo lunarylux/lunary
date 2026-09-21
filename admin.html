@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lunary (LUX) — Mining</title>
-<link rel="icon" type="image/png" href="https://lunary.xyz/asset/lunary.png">
+<title>Lunary (LUX) — Admin Panel</title>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,504 +25,420 @@
   body::before {
     content: ''; position: fixed; inset: 0;
     background:
-      radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,0.18), transparent 60%),
-      radial-gradient(1000px 700px at 100% 100%, rgba(96,165,250,0.15), transparent 60%),
+      radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,0.15), transparent 60%),
+      radial-gradient(1000px 700px at 100% 100%, rgba(96,165,250,0.12), transparent 60%),
       linear-gradient(135deg, var(--bg-1), var(--bg-2));
     z-index: -2;
   }
-  body::after {
-    content: ''; position: fixed; inset: 0;
-    background-image:
-      radial-gradient(1px 1px at 10% 20%, #fff, transparent),
-      radial-gradient(1px 1px at 80% 30%, #fff, transparent),
-      radial-gradient(1.5px 1.5px at 40% 70%, #fff, transparent),
-      radial-gradient(1px 1px at 60% 10%, #fff, transparent),
-      radial-gradient(1px 1px at 25% 85%, #fff, transparent),
-      radial-gradient(1.5px 1.5px at 90% 75%, #fff, transparent);
-    opacity: 0.35; z-index: -1;
-    animation: twinkle 8s infinite alternate;
-  }
-  @keyframes twinkle { from{opacity:.2} to{opacity:.5} }
-  .container { max-width: 520px; width: 100%; margin: 0 auto; padding: 28px 20px 60px; }
-  .header { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
-  .logo-wrap { position: relative; width: 96px; height: 96px; margin-bottom: 14px; }
-  .logo-wrap::before {
-    content: ''; position: absolute; inset: -6px; border-radius: 50%;
-    background: conic-gradient(from 0deg, var(--primary), var(--secondary), var(--primary));
-    filter: blur(14px); opacity: 0.55; animation: spin 8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .container { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+  .header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
   .logo {
-    position: relative; width: 96px; height: 96px; border-radius: 50%;
-    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
-    object-fit: cover; display: block;
-  }
-  .logo-fallback {
-    position: absolute; inset: 0; display: flex; align-items: center;
-    justify-content: center; font-size: 44px; border-radius: 50%;
+    width: 56px; height: 56px; border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #2a2a4a, #0a0a1a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
   }
-  h1 {
-    font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
+  .header-text h1 {
+    font-size: 22px; font-weight: 800;
     background: linear-gradient(90deg, var(--primary), var(--secondary));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .tagline {
-    font-size: 12px; color: var(--muted); margin-top: 4px;
-    letter-spacing: 1.5px; text-transform: uppercase;
-  }
-  .card {
-    background: var(--card); border: 1px solid var(--card-border);
-    border-radius: 18px; padding: 18px 20px; margin-bottom: 14px;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  }
-  .card-title {
-    font-size: 12px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--primary);
-    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
-  }
-  .card-title.gold { color: var(--gold); }
-  .card-title.danger { color: var(--danger); }
-  .row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 6px 0; font-size: 14px;
-  }
-  .row + .row { border-top: 1px solid rgba(255,255,255,0.04); }
-  .label { color: var(--muted); }
-  .value { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-  .value.gold {
-    background: linear-gradient(90deg, var(--gold), var(--gold-2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .timer-card { text-align: center; padding: 26px 20px; }
-  #timer {
-    font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: 1px;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 8px; min-height: 52px;
-  }
-  #timerLabel {
-    font-size: 11px; color: var(--muted); letter-spacing: 1.5px;
-    text-transform: uppercase;
-  }
-  .progress-wrap {
-    margin-top: 16px; height: 6px; background: rgba(255,255,255,0.06);
-    border-radius: 100px; overflow: hidden;
-  }
-  #progressBar {
-    height: 100%; width: 0%;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    border-radius: 100px; transition: width 0.5s ease;
-    box-shadow: 0 0 12px rgba(167,139,250,0.6);
-  }
-  .pow-info {
-    font-size: 11px; color: var(--muted); margin-top: 10px;
-    font-variant-numeric: tabular-nums; min-height: 16px;
-  }
-  button {
-    width: 100%; padding: 16px; font-size: 15px; font-weight: 700;
-    border-radius: 14px; border: none; cursor: pointer; margin-bottom: 10px;
-    transition: transform 0.15s, box-shadow 0.2s, background 0.3s;
-    font-family: inherit; letter-spacing: 0.3px;
-  }
-  button:not(:disabled):hover { transform: translateY(-1px); }
-  button:disabled { cursor: not-allowed; }
-  #connectBtn {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: #fff; border: none; margin-bottom: 16px;
-    box-shadow: 0 6px 20px rgba(167,139,250,0.35);
-  }
-  #startBtn {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: #fff; box-shadow: 0 6px 20px rgba(167,139,250,0.35);
-  }
-  #startBtn:disabled {
-    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
-  }
-  #claimBtn {
-    background: linear-gradient(135deg, var(--gold), var(--gold-2));
-    color: #1a1a2e; box-shadow: 0 6px 20px rgba(251,191,36,0.3);
-  }
-  #claimBtn:disabled {
-    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
-  }
-  #payFeeBtn {
-    background: linear-gradient(135deg, #f472b6, #ec4899);
-    color: #fff; box-shadow: 0 6px 20px rgba(244,114,182,0.35);
-  }
-  #payFeeBtn:disabled {
-    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
-  }
-  #withdrawBtn {
-    background: linear-gradient(135deg, var(--success), #10b981);
-    color: #052e16; box-shadow: 0 6px 20px rgba(52,211,153,0.35);
-  }
-  #withdrawBtn:disabled {
-    background: rgba(255,255,255,0.05); color: #555; box-shadow: none;
-  }
-  #status {
-    text-align: center; font-size: 13px; color: #bbb;
-    padding: 14px; background: rgba(0,0,0,0.25);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 12px; margin-top: 4px;
-    transition: color 0.3s; word-break: break-word; line-height: 1.5;
-  }
-  #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
-  #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
-  #status.info { color: var(--secondary); border-color: rgba(96,165,250,0.3); }
-  .footer { text-align: center; font-size: 11px; color: #555; margin-top: 24px; }
-  .footer a { color: var(--primary); text-decoration: none; }
-  .hidden { display: none !important; }
-  .network-warn {
-    text-align: center; font-size: 12px; color: #fbbf24;
-    background: rgba(251,191,36,0.08);
-    border: 1px solid rgba(251,191,36,0.3);
-    border-radius: 10px; padding: 10px; margin-bottom: 12px;
-  }
-  .network-warn button {
-    margin-top: 8px; margin-bottom: 0; padding: 10px 14px;
-    font-size: 13px; width: auto; display: inline-block;
-    background: linear-gradient(135deg, var(--gold), var(--gold-2));
-    color: #1a1a2e;
+  .header-text p {
+    font-size: 11px; color: var(--muted); letter-spacing: 1.2px;
+    text-transform: uppercase; margin-top: 2px;
   }
   .badge {
     display: inline-block; font-size: 10px; padding: 3px 8px;
     border-radius: 100px; letter-spacing: 1px; text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 700; margin-left: 8px;
   }
   .badge.ok { background: rgba(52,211,153,0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
   .badge.warn { background: rgba(251,191,36,0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
   .badge.err { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
-  .mini-bar {
-    height: 8px; background: rgba(255,255,255,0.06); border-radius: 100px;
-    overflow: hidden; margin: 8px 0 4px;
+  .card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 18px 20px; margin-bottom: 14px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   }
-  .mini-bar > div {
-    height: 100%; width: 0%;
-    background: linear-gradient(90deg, var(--success), #10b981);
-    border-radius: 100px; transition: width 0.5s;
+  .card-title {
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--primary);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
   }
+  .card-title.danger { color: var(--danger); }
+  .card-title.gold { color: var(--gold); }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; font-size: 13.5px;
+  }
+  .row + .row { border-top: 1px solid rgba(255,255,255,0.04); }
+  .label { color: var(--muted); }
+  .value { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; word-break: break-all; }
+  input[type="text"], input[type="number"] {
+    width: 100%; padding: 11px 14px; font-size: 14px;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3); color: var(--text);
+    font-family: inherit; outline: none; transition: border-color 0.2s;
+    margin-bottom: 10px;
+  }
+  input:focus { border-color: var(--primary); }
+  input::placeholder { color: #555; }
+  button {
+    padding: 13px 16px; font-size: 14px; font-weight: 700;
+    border-radius: 11px; border: none; cursor: pointer;
+    transition: transform 0.15s, opacity 0.2s;
+    font-family: inherit; letter-spacing: 0.3px;
+    width: 100%; margin-bottom: 8px;
+  }
+  button:not(:disabled):hover { transform: translateY(-1px); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; }
+  .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-2)); color: #1a1a2e; }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.4); }
+  .btn-ghost { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-row button { margin-bottom: 0; }
+  #connectBtn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; width: 100%; padding: 16px; font-size: 15px; margin-bottom: 16px;
+  }
+  .toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 11px; margin-bottom: 10px;
+  }
+  .toggle-label { font-size: 13.5px; font-weight: 600; }
+  .toggle-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .switch { position: relative; width: 48px; height: 26px; flex-shrink: 0; cursor: pointer; }
+  .switch input { display: none; }
+  .switch .slider {
+    position: absolute; inset: 0; background: rgba(255,255,255,0.1);
+    border-radius: 100px; transition: 0.3s;
+  }
+  .switch .slider::before {
+    content: ''; position: absolute; width: 20px; height: 20px;
+    border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: 0.3s;
+  }
+  .switch input:checked + .slider { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+  .switch input:checked + .slider::before { transform: translateX(22px); }
+  #status {
+    text-align: center; font-size: 13px; color: #bbb;
+    padding: 14px; background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px; margin-top: 10px;
+    word-break: break-word; transition: color 0.3s;
+    line-height: 1.5;
+  }
+  #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
+  #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  #status.info { color: var(--secondary); border-color: rgba(96,165,250,0.3); }
+  .hidden { display: none !important; }
+  .divider { height: 1px; background: rgba(255,255,255,0.05); margin: 14px 0; }
+  .footer { text-align: center; font-size: 11px; color: #555; margin-top: 24px; }
+  .footer a { color: var(--primary); text-decoration: none; }
+  .warn-box {
+    background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 10px; padding: 12px 14px; font-size: 12.5px;
+    color: var(--gold); margin-bottom: 12px; line-height: 1.5;
+  }
+  .warn-box code { color: #fff; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
   .mini-info {
-    font-size: 11px; color: var(--muted); text-align: center;
-    font-variant-numeric: tabular-nums;
+    background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.25);
+    border-radius: 10px; padding: 10px 12px; font-size: 12px;
+    color: #cfe2ff; margin-bottom: 10px; line-height: 1.5;
+    word-break: break-all;
   }
-  @media (max-width: 400px) {
-    #timer { font-size: 36px; }
-    h1 { font-size: 26px; }
-    .logo, .logo-wrap { width: 80px; height: 80px; }
+  .mini-info code { color: #fff; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+  .rescue-item {
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 12px; margin-bottom: 8px; font-size: 12.5px;
+    line-height: 1.6;
   }
+  .rescue-item code { color: #fff; background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
 </style>
 </head>
 <body>
 <div class="container">
 
   <div class="header">
-    <div class="logo-wrap">
-      <div class="logo-fallback">🌙</div>
-      <img id="logo" class="logo" src="https://lunary.xyz/asset/lunary.png"
-           alt="Lunary Logo" onerror="this.style.display='none';" />
-    </div>
-    <h1>Lunary</h1>
-    <div class="tagline">LUX · PoW Mining · 4× Halving</div>
-  </div>
-
-  <div id="networkWarn" class="network-warn hidden">
-    ⚠️ Wrong network. Please switch to <b>Sepolia Testnet</b>.
-    <br>
-    <button id="switchNetBtn" type="button">🔁 Switch to Sepolia</button>
-  </div>
-
-  <button id="connectBtn" type="button">🔌 Connect Wallet</button>
-
-  <div class="card hidden" id="statsCard">
-    <div class="row">
-      <span class="label">Wallet</span>
-      <span class="value" id="wallet">-</span>
-    </div>
-    <div class="row">
-      <span class="label">LUX Balance (wallet)</span>
-      <span class="value gold" id="luxBal">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Current Reward</span>
-      <span class="value gold" id="reward">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Epoch</span>
-      <span class="value" id="epoch">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Total Mined</span>
-      <span class="value" id="mined">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Max Supply</span>
-      <span class="value" id="maxSupply">-</span>
+    <div class="logo">🌙</div>
+    <div class="header-text">
+      <h1>Lunary Admin <span id="ownerBadge" class="badge warn hidden">OWNER</span></h1>
+      <p>LUX · Contract Control · Sepolia</p>
     </div>
   </div>
 
-  <div class="card hidden" id="minerCard">
-    <div class="card-title">🔑 Miner Status</div>
-    <div class="row">
-      <span class="label">Entry Fee</span>
-      <span class="value" id="minerFeeInfo">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Whitelist Status</span>
-      <span class="value" id="minerAuthStatus">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Allowed to Mine?</span>
-      <span class="value" id="minerAllowedStatus">-</span>
-    </div>
-    <div id="payFeeWrap" class="hidden" style="margin-top:12px;">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center;">
-        You are not registered yet. Pay the fee once to enable mining.
+  <div id="warnBox" class="warn-box hidden"></div>
+
+  <button id="connectBtn">🔌 Connect Wallet</button>
+
+  <!-- INFO -->
+  <div class="card hidden" id="infoCard">
+    <div class="card-title">📊 Contract Info</div>
+    <div class="row"><span class="label">Contract</span><span class="value" id="infoAddress">-</span></div>
+    <div class="row"><span class="label">Owner</span><span class="value" id="infoOwner">-</span></div>
+    <div class="row"><span class="label">Your Wallet</span><span class="value" id="infoUser">-</span></div>
+    <div class="row"><span class="label">Current Reward</span><span class="value" id="infoReward">-</span></div>
+    <div class="row"><span class="label">Epoch</span><span class="value" id="infoEpoch">-</span></div>
+    <div class="row"><span class="label">Total Mined</span><span class="value" id="infoMined">-</span></div>
+    <div class="row"><span class="label">Max Supply</span><span class="value" id="infoMax">-</span></div>
+    <div class="row"><span class="label">Pending Claims</span><span class="value" id="infoPending">-</span></div>
+    <div class="row"><span class="label">Min Claim (Auto-Halving)</span><span class="value" id="infoMinClaim">-</span></div>
+    <div class="row"><span class="label">Total Authorized Miners</span><span class="value" id="infoAuthMiners">-</span></div>
+    <div class="row"><span class="label">Mining Status</span><span class="value" id="infoPaused">-</span></div>
+    <div class="row"><span class="label">POL Balance (contract)</span><span class="value" id="infoPolBal">-</span></div>
+    <div class="row"><span class="label">LUX Balance (contract)</span><span class="value" id="infoLuxBal">-</span></div>
+    <div class="row"><span class="label">LUX Available for Rescue</span><span class="value" id="infoLuxAvailable">-</span></div>
+  </div>
+
+  <!-- MINER FEE -->
+  <div class="card hidden" id="feeCard">
+    <div class="card-title gold">💰 Entry Fee (Add Miner)</div>
+    <div class="toggle">
+      <div>
+        <div class="toggle-label">Enable Entry Fee</div>
+        <div class="toggle-sub">If off, anyone can mine without whitelist</div>
       </div>
-      <button id="payFeeBtn" type="button" disabled>💳 Pay Fee & Register</button>
+      <label class="switch">
+        <input type="checkbox" id="feeEnabledToggle">
+        <span class="slider"></span>
+      </label>
     </div>
+    <div class="row"><span class="label">Current Fee</span><span class="value" id="feeCurrent">-</span></div>
+    <div class="row"><span class="label">Accumulated Fees</span><span class="value" id="feeAccumulated">-</span></div>
+    <div class="row"><span class="label">Fee Recipient</span><span class="value" id="feeRecipient">-</span></div>
+    <div class="divider"></div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Change Fee Amount (ETH)</label>
+    <input type="number" id="feeAmountInput" placeholder="e.g. 1" step="0.0001" min="0">
+    <div class="btn-row">
+      <button class="btn-ghost" data-fee="0.1">0.1 ETH</button>
+      <button class="btn-ghost" data-fee="0.5">0.5 ETH</button>
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="btn-ghost" data-fee="1">1 ETH</button>
+      <button class="btn-ghost" data-fee="2">2 ETH</button>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn-gold" id="saveFeeBtn">💾 Save Fee Changes</button>
+    </div>
+    <div class="divider"></div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Change Fee Recipient</label>
+    <input type="text" id="feeRecipientInput" placeholder="0x...">
+    <button class="btn-ghost" id="saveFeeRecipientBtn">💾 Save Fee Recipient</button>
   </div>
 
-  <div class="card timer-card hidden" id="miningCard">
-    <div id="timer">--:--:--</div>
-    <div id="timerLabel">Mining Time</div>
-
-    <div class="progress-wrap">
-      <div id="progressBar"></div>
+  <!-- ADD MINER -->
+  <div class="card hidden" id="minerCard">
+    <div class="card-title gold">👤 Add / Remove Miner</div>
+    <div class="mini-info">
+      Current fee: <code id="minerFeeInfo">-</code> · Status: <code id="minerFeeStatusInfo">-</code>
     </div>
-    <div class="pow-info" id="powProgress">PoW: idle</div>
 
-    <div style="margin-top:20px;">
-      <button id="startBtn" type="button" disabled>▶️ Start Mining</button>
-      <button id="claimBtn" type="button" disabled>💰 Claim Reward</button>
-    </div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Single Address</label>
+    <input type="text" id="addMinerAddress" placeholder="0x...">
+    <button class="btn-primary" id="addMinerBtn">➕ Add Miner (pay fee)</button>
+    <button class="btn-ghost" id="addMinerBatchBtn">➕ Batch Add (comma separated)</button>
+    <div class="divider"></div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Check miner status</label>
+    <input type="text" id="checkMinerAddress" placeholder="0x...">
+    <button class="btn-ghost" id="checkMinerBtn">🔍 Check Status</button>
+    <div class="mini-info hidden" id="minerCheckResult"></div>
+    <div class="divider"></div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Remove Miner (owner only)</label>
+    <input type="text" id="removeMinerAddress" placeholder="0x...">
+    <button class="btn-danger" id="removeMinerBtn">🗑️ Remove Miner</button>
   </div>
 
-  <div class="card hidden" id="pendingCard">
-    <div class="card-title gold">💎 Mined Balance (Not in Wallet)</div>
-    <div class="row">
-      <span class="label">Pending Balance</span>
-      <span class="value gold" id="pendingBalance">-</span>
-    </div>
-    <div class="row">
-      <span class="label">Min. Withdraw</span>
-      <span class="value" id="minClaimInfo">-</span>
-    </div>
-    <div class="mini-bar"><div id="pendingBar"></div></div>
-    <div class="mini-info" id="pendingInfo">-</div>
-    <div style="margin-top:12px;">
-      <button id="withdrawBtn" type="button" disabled>🏦 Withdraw to Wallet</button>
-    </div>
+  <!-- WITHDRAW -->
+  <div class="card hidden" id="withdrawCard">
+    <div class="card-title gold">🏦 Withdraw Accumulated Fees</div>
+    <div class="row"><span class="label">Accumulated Fees</span><span class="value" id="wPolBal">-</span></div>
+    <div class="row"><span class="label">POL Balance (contract)</span><span class="value" id="wTotalPolBal">-</span></div>
+    <div class="divider"></div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Destination address (optional)</label>
+    <input type="text" id="withdrawTo" placeholder="0x... (empty = feeRecipient)">
+    <button class="btn-gold" id="withdrawFeesBtn">💸 Withdraw to Fee Recipient</button>
+    <button class="btn-ghost" id="withdrawFeesToBtn">💸 Withdraw to Custom Address</button>
   </div>
 
-  <div id="status">Waiting...</div>
+  <!-- RESCUE -->
+  <div class="card hidden" id="rescueCard">
+    <div class="card-title danger">🚨 Rescue Token</div>
+    <div class="warn-box">
+      ⚠️ Rescue has <b>1-day delay</b>: 2 steps.<br>
+      1) Create request → 2) Wait 24 hours → 3) Execute to owner.<br>
+      Leave token address empty to rescue <b>POL</b>. Use <code>address(this)</code> for LUX.<br>
+      <b>LUX rescue</b> is limited to balance outside <code>totalPendingClaims</code>.
+    </div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Token address (empty = POL)</label>
+    <input type="text" id="rescueToken" placeholder="0x... or leave empty">
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Amount (wei / smallest unit)</label>
+    <input type="text" id="rescueAmount" placeholder="e.g. 1000000000000000000 = 1 ETH">
+    <button class="btn-danger" id="rescueBtn">🚨 Create Rescue Request</button>
 
-  <div class="footer">
-    © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
+    <div class="divider"></div>
+    <div class="card-title" style="font-size:11px;">Rescue Requests List</div>
+    <div id="rescueList"><span class="label" style="font-size:12px;">No requests yet.</span></div>
+
+    <div class="divider"></div>
+    <label class="label" style="display:block;margin-bottom:6px;font-size:12px;">Execute Rescue (after 24 hours)</label>
+    <input type="text" id="executeRescueId" placeholder="Rescue ID (bytes32 0x...)">
+    <button class="btn-danger" id="executeRescueBtn">⚡ Execute Rescue</button>
+    <button class="btn-ghost" id="cancelRescueBtn">❌ Cancel Rescue</button>
   </div>
+
+  <!-- PAUSE -->
+  <div class="card hidden" id="pauseCard">
+    <div class="card-title danger">⏸️ Mining Control</div>
+    <div class="row"><span class="label">Contract Status</span><span class="value" id="pauseStatus">-</span></div>
+    <div class="divider"></div>
+    <button class="btn-danger" id="pauseBtn">⏸️ Pause Mining</button>
+    <button class="btn-primary" id="unpauseBtn" style="margin-top:8px;">▶️ Unpause Mining</button>
+  </div>
+
+  <div id="status">Not connected</div>
+  <div class="footer">© 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
 <script>
-var CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
-var SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
-var SEPOLIA_CHAIN_ID_DEC = 11155111;
-var SITE_URL = "https://lunarylux.github.io";
+// ==================================================
+// CONFIG
+// ==================================================
+const CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
+const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
+const SEPOLIA_CHAIN_ID_DEC = 11155111;
+const EXPLORER = "https://sepolia.etherscan.io";
 
-var GAS_LIMIT_START_MINING = 350000;
-var GAS_LIMIT_CLAIM = 250000;
-var GAS_LIMIT_ADD_MINER = 150000;
-var GAS_LIMIT_WITHDRAW = 150000;
-
-var ABI = [
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
-  "function totalSupply() view returns (uint256)",
-  "function balanceOf(address) view returns (uint256)",
-  "function MAX_SUPPLY() view returns (uint256)",
-  "function minClaimAmount() view returns (uint256)",
-
-  "function startMining(bytes32 clientSeed)",
-  "function claim(uint256 nonce)",
-  "function cancelMining()",
-  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
-  "function canClaim(address) view returns (bool)",
-  "function timeRemaining(address) view returns (uint256)",
+const ABI = [
+  // read - basic
+  "function owner() view returns (address)",
+  "function paused() view returns (bool)",
   "function currentReward() view returns (uint256)",
   "function currentEpoch() view returns (uint256)",
   "function totalMined() view returns (uint256)",
   "function totalClaims() view returns (uint256)",
-  "function DIFFICULTY() view returns (uint256)",
-  "function MINING_DURATION() view returns (uint256)",
-
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function minClaimAmount() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function getTreasuryBalance() view returns (uint256)",
+  "function getLUXBalance() view returns (uint256)",
+  "function getAvailableLUXForRescue() view returns (uint256)",
+  // read - fee
   "function minerFeeEnabled() view returns (bool)",
   "function minerFee() view returns (uint256)",
-  "function addMiner(address miner) payable",
+  "function feeRecipient() view returns (address)",
+  "function accumulatedFees() view returns (uint256)",
+  "function totalAuthorizedMiners() view returns (uint256)",
   "function authorizedMiners(address) view returns (bool)",
   "function isMinerAllowed(address) view returns (bool)",
-
-  "function minedBalance(address) view returns (uint256)",
+  // read - pending
   "function totalPendingClaims() view returns (uint256)",
+  "function getMinedBalance(address) view returns (uint256)",
   "function canWithdraw(address) view returns (bool)",
   "function amountNeededToWithdraw(address) view returns (uint256)",
-  "function claimToWallet()",
-
-  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge)",
-  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)",
-  "event MinedAccumulated(address indexed user, uint256 amount, uint256 newBalance)",
-  "event WithdrawnToWallet(address indexed user, uint256 amount)",
-  "event MinerAdded(address indexed miner, uint256 feePaid, address indexed payer)"
+  // write - fee
+  "function setMinerFee(uint256 newFee)",
+  "function setMinerFeeEnabled(bool enabled)",
+  "function setFeeRecipient(address newRecipient)",
+  // write - miner
+  "function addMiner(address miner) payable",
+  "function addMinerBatch(address[] miners) payable",
+  "function removeMiner(address miner)",
+  // write - withdraw
+  "function withdrawFees()",
+  "function withdrawFeesTo(address to)",
+  // write - rescue
+  "function createRescue(address token, uint256 amount) returns (bytes32)",
+  "function executeRescue(bytes32 id)",
+  "function cancelRescue(bytes32 id)",
+  "function rescues(bytes32) view returns (address token, uint256 amount, uint256 executeAfter, bool executed)",
+  "function getRescueIds() view returns (bytes32[])",
+  "function getRescueCount() view returns (uint256)",
+  // write - pause
+  "function pause()",
+  "function unpause()"
 ];
 
-var provider = null;
-var signer = null;
-var contract = null;
-var userAddress = null;
+// ==================================================
+// STATE
+// ==================================================
+let provider, signer, contract, userAddress, ownerAddress;
+let isOwner = false;
+let isWorking = false;
+let isConnecting = false;
+let cachedMinerFee = ethers.BigNumber.from(0);
+let cachedFeeEnabled = true;
 
-var timerInterval = null;
-var syncInterval = null;
-var foundNonce = null;
-var powRunning = false;
-var cachedChallenge = null;
-var cachedDifficulty = 100000n;
+const $ = (id) => document.getElementById(id);
 
-var sessionStartTime = 0;
-var sessionDuration = 14400;
-var serverOffset = 0;
-var canClaimTime = false;
-
-var cachedMinerFeeEnabled = false;
-var cachedMinerFee = 0n;
-var cachedMinerAuthorized = false;
-var cachedMinerAllowed = false;
-var cachedMinClaim = 20n * 100000000n;
-var cachedPendingBalance = 0n;
-
-var isWorking = false;
-var isConnecting = false;
-
-function $(id) { return document.getElementById(id); }
-
+// ==================================================
+// HELPERS
+// ==================================================
 function shortAddr(a) {
-  if (!a) return "—";
+  if (!a || a === "0x0000000000000000000000000000000000000000") return "—";
   return a.slice(0, 6) + "..." + a.slice(-4);
 }
-function p2(n) { return String(n).padStart(2, "0"); }
-
 function fmtLUX(v) {
   try {
-    if (typeof ethers === "undefined") return v.toString();
-    var s = ethers.utils.formatUnits(v, 8);
-    var n = Number(s);
+    const s = ethers.utils.formatUnits(v, 8);
+    const n = Number(s);
     if (!isFinite(n)) return s;
     return n.toLocaleString("en-US", { maximumFractionDigits: 8 });
-  } catch (e) { return String(v); }
+  } catch { return v.toString(); }
 }
 function fmtEth(v) {
   try {
-    var s = ethers.utils.formatEther(v);
-    var n = Number(s);
+    const s = ethers.utils.formatEther(v);
+    const n = Number(s);
     if (!isFinite(n)) return s;
     return n.toLocaleString("en-US", { maximumFractionDigits: 6 });
-  } catch (e) { return String(v); }
+  } catch { return v.toString(); }
 }
-
-function setStatus(msg, type) {
-  type = type || "";
-  var el = $("status");
-  if (!el) return;
-  el.innerHTML = msg;
+function setStatus(msg, type = "") {
+  const el = $("status");
+  el.innerText = msg;
   el.className = type;
 }
-function setProgress(pct) {
-  var el = $("progressBar");
-  if (el) el.style.width = Math.max(0, Math.min(100, pct)) + "%";
+function showWarn(html) {
+  const el = $("warnBox");
+  el.innerHTML = html;
+  el.classList.remove("hidden");
 }
-function setPowInfo(msg) {
-  var el = $("powProgress");
-  if (el) el.innerText = msg;
-}
+function hideWarn() { $("warnBox").classList.add("hidden"); }
+function shortId(id) { return id.slice(0, 10) + "..." + id.slice(-6); }
 
 function decodeError(e) {
   if (!e) return "Unknown error";
   if (typeof e === "string") return e;
   if (e.reason) return e.reason;
-  var data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
-  if (typeof data === "string" && data.indexOf("0x08c379a0") === 0) {
-    try {
-      return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0];
-    } catch (x) {}
+  const data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
+  if (typeof data === "string" && data.startsWith("0x08c379a0")) {
+    try { return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0]; } catch {}
   }
-  if (typeof data === "string" && data.indexOf("0x4e487b71") === 0) {
-    var code = parseInt(data.slice(10, 74), 16);
-    return "Panic 0x" + code.toString(16);
+  if (typeof data === "string" && data.startsWith("0x4e487b71")) {
+    const code = parseInt(data.slice(10, 74), 16);
+    return `Panic 0x${code.toString(16)}`;
   }
   if (e.message) return e.message;
   if (e.error && e.error.message) return e.error.message;
   return "Transaction reverted";
 }
 
-function isMobile() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-function hasInjectedWallet() {
-  return typeof window.ethereum !== "undefined";
-}
-
-async function safeCall(fn, fallback) {
-  try { return await fn(); }
-  catch (e) { console.warn("safeCall failed:", e); return fallback; }
-}
-
-async function fastVerifyContract(prov) {
-  var cacheKey = "lux_abi_ok_" + CONTRACT_ADDRESS.toLowerCase();
-  try {
-    var cached = sessionStorage.getItem(cacheKey);
-    if (cached === "1") return true;
-  } catch (e) {}
-
-  var iface = new ethers.utils.Interface(ABI);
-  var data = iface.encodeFunctionData("currentReward", []);
-  try {
-    var res = await prov.call({ to: CONTRACT_ADDRESS, data: data });
-    if (res && res !== "0x") {
-      try { sessionStorage.setItem(cacheKey, "1"); } catch (e) {}
-      return true;
-    }
-    return false;
-  } catch (e) {
-    console.warn("Contract verify failed:", e);
-    return false;
-  }
-}
-
-async function syncServerTime() {
-  try {
-    var block = await provider.send("eth_getBlockByNumber", ["latest", false]);
-    if (block && block.timestamp) {
-      var ts = parseInt(block.timestamp, 16);
-      var localNow = Math.floor(Date.now() / 1000);
-      serverOffset = ts - localNow;
-    }
-  } catch (e) {
-    serverOffset = 0;
-  }
-}
-
+// ==================================================
+// SWITCH / ADD SEPOLIA
+// ==================================================
 async function ensureSepolia() {
-  if (!window.ethereum) throw new Error("MetaMask not detected");
-  var current = await window.ethereum.request({ method: "eth_chainId" });
+  const current = await window.ethereum.request({ method: "eth_chainId" });
   if (current.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
 
   try {
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }]
+      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }],
     });
   } catch (err) {
     if (err.code === 4902 || err.code === -32603) {
@@ -535,8 +450,8 @@ async function ensureSepolia() {
             chainName: "Sepolia Testnet",
             nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
             rpcUrls: ["https://rpc.sepolia.org", "https://sepolia.drpc.org"],
-            blockExplorerUrls: ["https://sepolia.etherscan.io"]
-          }]
+            blockExplorerUrls: [EXPLORER],
+          }],
         });
       } catch (addErr) {
         if (addErr.code === 4001) throw new Error("You rejected adding Sepolia");
@@ -549,680 +464,730 @@ async function ensureSepolia() {
     }
   }
 
-  var start = Date.now();
+  const start = Date.now();
   while (Date.now() - start < 5000) {
-    var c = await window.ethereum.request({ method: "eth_chainId" });
+    const c = await window.ethereum.request({ method: "eth_chainId" });
     if (c.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
-    await new Promise(function(r) { setTimeout(r, 200); });
+    await new Promise(r => setTimeout(r, 200));
   }
   throw new Error("Timeout: MetaMask did not switch to Sepolia");
 }
 
+// ==================================================
+// CONNECT CORE
+// ==================================================
 async function doConnect() {
   if (isConnecting) return;
   isConnecting = true;
   try {
-    if (typeof ethers === "undefined") {
-      setStatus("❌ ethers library failed to load.", "error");
+    setStatus("🔍 Checking MetaMask...", "info");
+
+    if (!window.ethereum) {
+      setStatus("❌ MetaMask not detected. Install at https://metamask.io", "error");
       return;
     }
 
-    if (!hasInjectedWallet()) {
-      var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
-      setStatus(
-        '❌ Wallet not detected.<br><br>' +
-        '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
-        'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
-        '🦊 Open in MetaMask</a>',
-        "error"
-      );
-      return;
+    if (window.ethereum.providers && window.ethereum.providers.length > 1) {
+      const mm = window.ethereum.providers.find(p => p.isMetaMask);
+      if (mm) window.ethereum = mm;
     }
 
     setStatus("🔓 Requesting account access...", "info");
-    var accounts;
-    try {
-      accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    } catch (accErr) {
-      if (accErr.code === 4001) {
-        setStatus("❌ You rejected the connection request.", "error");
-        return;
-      }
-      throw accErr;
-    }
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     if (!accounts || accounts.length === 0) {
-      setStatus("❌ No account detected.", "error");
+      setStatus("❌ No account selected", "error");
       return;
     }
     userAddress = accounts[0];
 
-    var chainId = await window.ethereum.request({ method: "eth_chainId" });
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
     if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
-      $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Wrong network. Click <b>Switch to Sepolia</b> above.", "error");
-      return;
+      setStatus("⚠️ Not on Sepolia. Requesting switch...", "error");
+      try {
+        await ensureSepolia();
+      } catch (switchErr) {
+        setStatus("❌ " + switchErr.message, "error");
+        return;
+      }
     }
-    $("networkWarn").classList.add("hidden");
 
     provider = new ethers.providers.Web3Provider(window.ethereum, "any");
     signer = provider.getSigner();
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-    var ok = await fastVerifyContract(provider);
-    if (!ok) {
-      setStatus("❌ Contract not responding at this address.", "error");
+    const net = await provider.getNetwork();
+    if (Number(net.chainId) !== SEPOLIA_CHAIN_ID_DEC) {
+      setStatus("⚠️ Provider still reads old chain. Click Connect again.", "error");
       return;
     }
 
-    var consts = await Promise.all([
-      safeCall(function() { return contract.DIFFICULTY(); }, null),
-      safeCall(function() { return contract.MINING_DURATION(); }, null),
-      safeCall(function() { return contract.minClaimAmount(); }, null)
-    ]);
-    if (consts[0]) cachedDifficulty = BigInt(consts[0].toString());
-    if (consts[1]) sessionDuration = Number(consts[1]);
-    if (consts[2]) cachedMinClaim = BigInt(consts[2].toString());
+    const code = await provider.getCode(CONTRACT_ADDRESS);
+    if (!code || code === "0x") {
+      setStatus(`❌ No contract at ${CONTRACT_ADDRESS}`, "error");
+      return;
+    }
 
-    syncServerTime().catch(function() {});
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-    $("wallet").innerText = shortAddr(userAddress);
+    ownerAddress = await contract.owner();
+    isOwner = ownerAddress.toLowerCase() === userAddress.toLowerCase();
+
+    if (!isOwner) {
+      showWarn(`
+        ⚠️ Your wallet is <b>not the owner</b>. View-only mode.<br><br>
+        Owner: <code>${ownerAddress}</code><br>
+        You: <code>${userAddress}</code>
+      `);
+      $("ownerBadge").className = "badge err";
+      $("ownerBadge").innerText = "NOT OWNER";
+    } else {
+      hideWarn();
+      $("ownerBadge").className = "badge ok";
+      $("ownerBadge").innerText = "OWNER";
+    }
+    $("ownerBadge").classList.remove("hidden");
+
+    const writeIds = [
+      "saveFeeBtn", "saveFeeRecipientBtn", "feeEnabledToggle",
+      "addMinerBtn", "addMinerBatchBtn", "removeMinerBtn",
+      "withdrawFeesBtn", "withdrawFeesToBtn",
+      "rescueBtn", "executeRescueBtn", "cancelRescueBtn",
+      "pauseBtn", "unpauseBtn"
+    ];
+    writeIds.forEach(id => {
+      const el = $(id);
+      if (el) el.disabled = !isOwner;
+    });
+
     $("connectBtn").style.display = "none";
-    $("statsCard").classList.remove("hidden");
-    $("minerCard").classList.remove("hidden");
-    $("miningCard").classList.remove("hidden");
-    $("pendingCard").classList.remove("hidden");
+    ["infoCard", "feeCard", "minerCard", "withdrawCard", "rescueCard", "pauseCard"].forEach(id => {
+      $(id).classList.remove("hidden");
+    });
 
-    updateUI();
+    setStatus(`✅ Connected as ${isOwner ? "OWNER" : "viewer"}`, "success");
 
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(updateTimer, 1000);
-
-    if (syncInterval) clearInterval(syncInterval);
-    syncInterval = setInterval(function() {
-      updateUI();
-    }, 60000);
-
+    await Promise.all([loadAllInfo(), loadFeeInfo(), loadRescueList()]);
   } catch (e) {
     console.error("Connect error:", e);
-    var msg = decodeError(e);
-    if (msg.toLowerCase().indexOf("user rejected") >= 0 ||
-        msg.toLowerCase().indexOf("user denied") >= 0) {
-      setStatus("❌ You rejected the connection request.", "error");
-    } else {
-      setStatus("❌ " + msg, "error");
-    }
+    setStatus("❌ " + decodeError(e), "error");
   } finally {
     isConnecting = false;
   }
 }
 
-async function updateUI() {
-  if (!contract || !userAddress) return;
-  try {
-    var now = Math.floor(Date.now() / 1000) + serverOffset;
+$("connectBtn").onclick = doConnect;
 
-    var results = await Promise.all([
-      safeCall(function() { return contract.currentReward(); }, null),
-      safeCall(function() { return contract.currentEpoch(); }, null),
-      safeCall(function() { return contract.totalMined(); }, null),
-      safeCall(function() { return contract.MAX_SUPPLY(); }, null),
-      safeCall(function() { return contract.balanceOf(userAddress); }, null),
-      safeCall(function() { return contract.minerFeeEnabled(); }, null),
-      safeCall(function() { return contract.minerFee(); }, null),
-      safeCall(function() { return contract.authorizedMiners(userAddress); }, null),
-      safeCall(function() { return contract.isMinerAllowed(userAddress); }, null),
-      safeCall(function() { return contract.minedBalance(userAddress); }, null),
-      safeCall(function() { return contract.sessions(userAddress); }, null),
-      safeCall(function() { return contract.minClaimAmount(); }, null)
+// ==================================================
+// LOAD INFO
+// ==================================================
+async function loadAllInfo() {
+  if (!contract) return;
+  try {
+    const [
+      reward, epoch, mined, totalClaims, max, paused,
+      polBal, luxBal, pending, minClaim,
+      luxAvailable, authMiners, accumulated
+    ] = await Promise.all([
+      contract.currentReward(),
+      contract.currentEpoch(),
+      contract.totalMined(),
+      contract.totalClaims().catch(() => 0),
+      contract.MAX_SUPPLY(),
+      contract.paused().catch(() => false),
+      contract.getTreasuryBalance().catch(() => ethers.BigNumber.from(0)),
+      contract.getLUXBalance().catch(() => ethers.BigNumber.from(0)),
+      contract.totalPendingClaims().catch(() => ethers.BigNumber.from(0)),
+      contract.minClaimAmount().catch(() => ethers.BigNumber.from(0)),
+      contract.getAvailableLUXForRescue().catch(() => ethers.BigNumber.from(0)),
+      contract.totalAuthorizedMiners().catch(() => 0),
+      contract.accumulatedFees().catch(() => ethers.BigNumber.from(0))
     ]);
 
-    var reward = results[0], epoch = results[1], mined = results[2];
-    var maxSupply = results[3], bal = results[4];
-    var feeEnabled = results[5], fee = results[6];
-    var authorized = results[7], allowed = results[8];
-    var pendingBal = results[9], session = results[10];
-    var minClaimDynamic = results[11];
+    $("infoAddress").innerText = shortAddr(CONTRACT_ADDRESS);
+    $("infoOwner").innerText = shortAddr(ownerAddress);
+    $("infoUser").innerText = shortAddr(userAddress);
+    $("infoReward").innerText = fmtLUX(reward) + " LUX";
+    $("infoEpoch").innerText = epoch.toString() + ` (${totalClaims} claims)`;
+    $("infoMined").innerText = fmtLUX(mined) + " LUX";
+    $("infoMax").innerText = fmtLUX(max) + " LUX";
+    $("infoPending").innerText = fmtLUX(pending) + " LUX";
+    $("infoMinClaim").innerText = fmtLUX(minClaim) + " LUX";
+    $("infoAuthMiners").innerText = authMiners.toString();
+    $("infoPaused").innerHTML = paused
+      ? '<span style="color:var(--danger)">PAUSED</span>'
+      : '<span style="color:var(--success)">ACTIVE</span>';
+    $("infoPolBal").innerText = fmtEth(polBal) + " ETH";
+    $("infoLuxBal").innerText = fmtLUX(luxBal) + " LUX";
+    $("infoLuxAvailable").innerText = fmtLUX(luxAvailable) + " LUX";
+    $("pauseStatus").innerHTML = paused
+      ? '<span style="color:var(--danger)">PAUSED</span>'
+      : '<span style="color:var(--success)">ACTIVE</span>';
 
-    if (feeEnabled !== null) cachedMinerFeeEnabled = !!feeEnabled;
-    if (fee !== null) cachedMinerFee = BigInt(fee.toString());
-    if (authorized !== null) cachedMinerAuthorized = !!authorized;
-    if (allowed !== null) cachedMinerAllowed = !!allowed;
-    if (pendingBal !== null) cachedPendingBalance = BigInt(pendingBal.toString());
-    if (minClaimDynamic !== null) cachedMinClaim = BigInt(minClaimDynamic.toString());
-
-    if (reward !== null) $("reward").innerText = fmtLUX(reward) + " LUX";
-    if (epoch !== null) $("epoch").innerText = epoch.toString();
-    if (mined !== null) $("mined").innerText = fmtLUX(mined) + " LUX";
-    if (maxSupply !== null) $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
-    if (bal !== null) $("luxBal").innerText = fmtLUX(bal) + " LUX";
-
-    if (feeEnabled !== null) {
-      if (feeEnabled) {
-        $("minerFeeInfo").innerHTML = '<span class="badge warn">ON</span> ' + fmtEth(cachedMinerFee) + " ETH";
-      } else {
-        $("minerFeeInfo").innerHTML = '<span class="badge ok">OFF</span> Free';
-      }
-    }
-    if (authorized !== null) {
-      $("minerAuthStatus").innerHTML = authorized
-        ? '<span class="badge ok">AUTHORIZED</span>'
-        : '<span class="badge err">NOT YET</span>';
-    }
-    if (allowed !== null) {
-      $("minerAllowedStatus").innerHTML = allowed
-        ? '<span class="badge ok">YES</span>'
-        : '<span class="badge err">NO</span>';
-    }
-
-    var payWrap = $("payFeeWrap");
-    var payBtn = $("payFeeBtn");
-    if (cachedMinerFeeEnabled && !cachedMinerAuthorized) {
-      payWrap.classList.remove("hidden");
-      payBtn.disabled = false;
-      payBtn.innerText = "💳 Pay " + fmtEth(cachedMinerFee) + " ETH & Register Miner";
-    } else {
-      payWrap.classList.add("hidden");
-      payBtn.disabled = true;
-    }
-
-    $("pendingBalance").innerText = fmtLUX(cachedPendingBalance) + " LUX";
-    $("minClaimInfo").innerText = fmtLUX(cachedMinClaim) + " LUX";
-
-    var pctPending = cachedMinClaim > 0n
-      ? Math.min(100, Number((cachedPendingBalance * 10000n) / cachedMinClaim) / 100)
-      : 0;
-    $("pendingBar").style.width = pctPending + "%";
-
-    var withdrawBtn = $("withdrawBtn");
-    if (cachedPendingBalance >= cachedMinClaim && cachedMinClaim > 0n) {
-      $("pendingInfo").innerHTML = '<span style="color:var(--success);font-weight:700;">✅ Ready to withdraw!</span>';
-      withdrawBtn.disabled = false;
-      withdrawBtn.innerText = "🏦 Withdraw " + fmtLUX(cachedPendingBalance) + " LUX to Wallet";
-    } else {
-      var needed = cachedMinClaim - cachedPendingBalance;
-      if (needed < 0n) needed = 0n;
-      $("pendingInfo").innerHTML = "Need <b>" + fmtLUX(needed) + " LUX</b> more";
-      withdrawBtn.disabled = true;
-      withdrawBtn.innerText = "🏦 Withdraw (min " + fmtLUX(cachedMinClaim) + " LUX)";
-    }
-
-    var startBtn = $("startBtn");
-    var claimBtn = $("claimBtn");
-
-    if (!session) return;
-
-    var active = session.active;
-    var claimed = session.claimed;
-
-    if (!active && !claimed) {
-      if (!cachedMinerAllowed) {
-        startBtn.disabled = true;
-        startBtn.innerText = "🔒 Not Whitelisted";
-      } else {
-        startBtn.disabled = false;
-        startBtn.innerText = "▶️ Start Mining";
-      }
-      claimBtn.disabled = true;
-      claimBtn.innerText = "💰 Claim Reward";
-      $("timer").innerText = "--:--:--";
-      $("timerLabel").innerText = cachedMinerAllowed ? "Ready to start" : "Pay the fee first";
-      setProgress(0);
-      setPowInfo("PoW: idle");
-      foundNonce = null;
-      cachedChallenge = null;
-      canClaimTime = false;
-      sessionStartTime = 0;
-
-    } else if (active && !claimed) {
-      cachedChallenge = session.challenge;
-      sessionStartTime = Number(session.startTime);
-
-      var elapsed = now - sessionStartTime;
-      var remaining = sessionDuration - elapsed;
-
-      startBtn.disabled = true;
-      startBtn.innerText = "⛏️ Mining in progress...";
-
-      if (foundNonce === null && !powRunning) {
-        setPowInfo("PoW: starting...");
-        startPoW(session.challenge);
-      }
-
-      if (remaining <= 0) {
-        canClaimTime = true;
-        $("timer").innerText = "✅ Ready to Claim";
-        setProgress(100);
-
-        if (foundNonce === null) {
-          claimBtn.disabled = true;
-          claimBtn.innerText = "⏳ PoW running...";
-          $("timerLabel").innerText = "Waiting for PoW...";
-        } else {
-          claimBtn.disabled = false;
-          claimBtn.innerText = "💰 Claim Reward";
-          $("timerLabel").innerText = "Click the Claim button";
-        }
-      } else {
-        canClaimTime = false;
-        claimBtn.disabled = true;
-        claimBtn.innerText = "💰 Claim Reward";
-        $("timerLabel").innerText = "Mining time remaining";
-        updateTimer();
-      }
-
-    } else {
-      if (!cachedMinerAllowed) {
-        startBtn.disabled = true;
-        startBtn.innerText = "🔒 Not Whitelisted";
-      } else {
-        startBtn.disabled = false;
-        startBtn.innerText = "🔄 Mine Again";
-      }
-      claimBtn.disabled = true;
-      claimBtn.innerText = "💰 Claim Reward";
-      $("timer").innerText = "✅ Done";
-      $("timerLabel").innerText = "Click Start for the next cycle";
-      setProgress(100);
-      canClaimTime = false;
-    }
+    $("wPolBal").innerText = fmtEth(accumulated) + " ETH";
+    $("wTotalPolBal").innerText = fmtEth(polBal) + " ETH";
   } catch (e) {
-    console.error("updateUI error:", e);
+    console.error("loadAllInfo error:", e);
   }
 }
 
-function updateTimer() {
-  if (!userAddress) return;
-  if (sessionStartTime === 0) return;
+// ==================================================
+// LOAD FEE INFO
+// ==================================================
+async function loadFeeInfo() {
+  if (!contract) return;
+  try {
+    const [enabled, fee, recip, accum, totalAuth] = await Promise.all([
+      contract.minerFeeEnabled(),
+      contract.minerFee(),
+      contract.feeRecipient(),
+      contract.accumulatedFees(),
+      contract.totalAuthorizedMiners()
+    ]);
+    cachedMinerFee = fee;
+    cachedFeeEnabled = enabled;
 
-  var now = Math.floor(Date.now() / 1000) + serverOffset;
-  var elapsed = now - sessionStartTime;
-  var sec = sessionDuration - elapsed;
+    $("feeEnabledToggle").checked = enabled;
+    $("feeCurrent").innerText = enabled
+      ? fmtEth(fee) + " ETH" + (fee.eq(0) ? " (free)" : "")
+      : "Disabled";
+    $("feeAccumulated").innerText = fmtEth(accum) + " ETH";
+    $("feeRecipient").innerText = shortAddr(recip);
+    if ($("feeRecipientInput").value === "") $("feeRecipientInput").value = recip;
 
-  var claimBtn = $("claimBtn");
-
-  if (sec <= 0) {
-    $("timer").innerText = "✅ Ready to Claim";
-    setProgress(100);
-    canClaimTime = true;
-
-    if (foundNonce !== null) {
-      if (claimBtn) {
-        claimBtn.disabled = false;
-        claimBtn.innerText = "💰 Claim Reward";
-      }
-      $("timerLabel").innerText = "Click the Claim button below";
-    } else {
-      if (claimBtn) {
-        claimBtn.disabled = true;
-        claimBtn.innerText = "⏳ PoW running...";
-      }
-      $("timerLabel").innerText = "Waiting for PoW...";
-    }
-    return;
-  }
-
-  canClaimTime = false;
-  var h = Math.floor(sec / 3600);
-  var m = Math.floor((sec % 3600) / 60);
-  var s = sec % 60;
-  $("timer").innerText = p2(h) + ":" + p2(m) + ":" + p2(s);
-
-  setProgress((elapsed / sessionDuration) * 100);
-
-  if (claimBtn && !claimBtn.disabled) {
-    claimBtn.disabled = true;
+    $("minerFeeInfo").innerText = fmtEth(fee) + " ETH";
+    $("minerFeeStatusInfo").innerText = enabled ? "ON (whitelist)" : "OFF (free)";
+    $("infoAuthMiners").innerText = totalAuth.toString();
+  } catch (e) {
+    console.error("loadFeeInfo error:", e);
   }
 }
 
-function startPoW(challenge) {
-  if (powRunning || foundNonce !== null) return;
-  powRunning = true;
+// ==================================================
+// FEE PRESET
+// ==================================================
+document.querySelectorAll("[data-fee]").forEach(btn => {
+  btn.onclick = () => { $("feeAmountInput").value = btn.dataset.fee; };
+});
 
-  var MAX_UINT = (1n << 256n) - 1n;
-  var target = MAX_UINT / cachedDifficulty;
-
-  var nonce = 0;
-  var hashCount = 0;
-  var startTime = Date.now();
-  var batch = 500;
-
-  function tick() {
-    if (foundNonce !== null) { powRunning = false; return; }
-
-    for (var i = 0; i < batch; i++) {
-      var hash = ethers.utils.solidityKeccak256(
-        ["bytes32", "address", "uint256"],
-        [challenge, userAddress, nonce]
-      );
-      hashCount++;
-      if (BigInt(hash) < target) {
-        foundNonce = nonce;
-        setPowInfo("✅ PoW complete! Nonce: " + nonce.toLocaleString("en-US"));
-        powRunning = false;
-
-        var cb = $("claimBtn");
-        if (cb) {
-          if (canClaimTime) {
-            cb.disabled = false;
-            cb.innerText = "💰 Claim Reward";
-            $("timerLabel").innerText = "Click the Claim button";
-          } else {
-            cb.disabled = true;
-            cb.innerText = "⏳ Waiting for timer...";
-            $("timerLabel").innerText = "PoW done, waiting for timer";
-          }
-        }
-        return;
-      }
-      nonce++;
-    }
-
-    var elapsed = (Date.now() - startTime) / 1000;
-    var rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
-    setPowInfo(
-      "PoW: " + hashCount.toLocaleString("en-US") + " hash · " +
-      rate.toLocaleString("en-US") + " H/s · nonce " + nonce.toLocaleString("en-US")
-    );
-    setTimeout(tick, 0);
-  }
-  tick();
-}
-
-async function handlePayFee() {
-  if (isWorking) return;
+// ==================================================
+// SAVE FEE
+// ==================================================
+$("saveFeeBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
   isWorking = true;
   try {
-    if (!cachedMinerFeeEnabled) {
-      setStatus("ℹ️ Entry fee is currently off. You can mine right away.", "info");
-      return;
-    }
-    if (cachedMinerAuthorized) {
-      setStatus("✅ You are already registered as a miner.", "success");
-      return;
-    }
-    if (cachedMinerFee <= 0n) {
-      setStatus("⚠️ Fee is 0 but you are not whitelisted.", "error");
-      return;
-    }
+    const enabled = $("feeEnabledToggle").checked;
+    const amountStr = $("feeAmountInput").value.trim();
 
-    if (!confirm("Pay " + fmtEth(cachedMinerFee) + " ETH to register as a miner?\n\nOne-time, non-refundable.")) {
-      return;
+    let amount;
+    if (amountStr === "") {
+      amount = cachedMinerFee;
+    } else {
+      const n = Number(amountStr);
+      if (!isFinite(n) || n < 0) throw new Error("Invalid amount");
+      amount = ethers.utils.parseEther(amountStr);
     }
 
-    setStatus("⏳ Sending transaction...", "info");
+    setStatus("⏳ Saving fee changes...", "info");
 
-    var tx = await contract.addMiner(userAddress, {
-      value: cachedMinerFee,
-      gasLimit: GAS_LIMIT_ADD_MINER
-    });
+    if (!amount.eq(cachedMinerFee)) {
+      const tx1 = await contract.setMinerFee(amount);
+      setStatus("⏳ Waiting for setMinerFee confirmation...", "info");
+      await tx1.wait();
+    }
+    if (enabled !== cachedFeeEnabled) {
+      const tx2 = await contract.setMinerFeeEnabled(enabled);
+      setStatus("⏳ Waiting for setMinerFeeEnabled confirmation...", "info");
+      await tx2.wait();
+    }
 
+    setStatus(`✅ Fee updated: ${enabled ? fmtEth(amount) + " ETH" : "Disabled"}`, "success");
+    $("feeAmountInput").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// SAVE FEE RECIPIENT
+// ==================================================
+$("saveFeeRecipientBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const to = $("feeRecipientInput").value.trim();
+    if (!ethers.utils.isAddress(to)) throw new Error("Invalid address");
+
+    setStatus("⏳ Changing fee recipient...", "info");
+    const tx = await contract.setFeeRecipient(to);
     setStatus("⏳ Waiting for confirmation...", "info");
     await tx.wait();
 
-    cachedMinerAuthorized = true;
-    cachedMinerAllowed = true;
-
-    setStatus("🎉 Successfully registered! Click <b>Start Mining</b>.", "success");
-
-    $("minerAuthStatus").innerHTML = '<span class="badge ok">AUTHORIZED</span>';
-    $("minerAllowedStatus").innerHTML = '<span class="badge ok">YES</span>';
-    $("payFeeWrap").classList.add("hidden");
-
-    var startBtn = $("startBtn");
-    if (startBtn) {
-      startBtn.disabled = false;
-      startBtn.innerText = "▶️ Start Mining";
-    }
-    $("timerLabel").innerText = "Ready to start";
-
+    setStatus(`✅ Fee recipient → ${shortAddr(to)}`, "success");
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
   } catch (e) {
     console.error(e);
     setStatus("❌ " + decodeError(e), "error");
   } finally {
     isWorking = false;
   }
-}
+};
 
-async function handleStartMining() {
-  if (isWorking) return;
+// ==================================================
+// ADD MINER (single)
+// ==================================================
+$("addMinerBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
   isWorking = true;
   try {
-    if (!cachedMinerAllowed) {
-      setStatus("🔒 You are not registered as a miner. Pay the fee first.", "error");
-      return;
-    }
+    const addr = $("addMinerAddress").value.trim();
+    if (!ethers.utils.isAddress(addr)) throw new Error("Invalid miner address");
 
-    setStatus("⏳ Sending transaction...", "info");
-    foundNonce = null;
-    powRunning = false;
-    canClaimTime = false;
-    setPowInfo("PoW: idle");
-    setProgress(0);
+    const already = await contract.authorizedMiners(addr);
+    if (already) throw new Error("Address already authorized");
 
-    var clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+    const enabled = await contract.minerFeeEnabled();
+    const fee = await contract.minerFee();
+    const value = enabled ? fee : ethers.BigNumber.from(0);
 
-    var tx = await contract.startMining(clientSeed, {
-      gasLimit: GAS_LIMIT_START_MINING
-    });
+    const feeLabel = enabled ? `${fmtEth(fee)} ETH` : "0 ETH (fee OFF)";
 
-    setStatus("⏳ Waiting for confirmation...", "info");
-    var receipt = await tx.wait();
+    if (!confirm(`Add miner:\n${addr}\n\nFee: ${feeLabel}\n\nContinue?`)) return;
 
-    var challenge = null;
-    for (var i = 0; i < receipt.logs.length; i++) {
-      try {
-        var parsed = contract.interface.parseLog(receipt.logs[i]);
-        if (parsed.name === "MiningStarted") {
-          challenge = parsed.args.challenge;
-          break;
-        }
-      } catch (x) {}
-    }
-    if (!challenge) {
-      var session = await safeCall(function() { return contract.sessions(userAddress); }, null);
-      if (session) challenge = session.challenge;
-    }
-
-    cachedChallenge = challenge;
-    setStatus("✅ Mining started! Wait " + (sessionDuration / 3600) + " hours.", "success");
-
-    syncServerTime().catch(function() {});
-    updateUI();
-
-  } catch (e) {
-    console.error(e);
-    setStatus("❌ " + decodeError(e), "error");
-  } finally {
-    isWorking = false;
-  }
-}
-
-async function handleClaim() {
-  if (isWorking) return;
-
-  if (!canClaimTime) {
-    setStatus("⏳ Wait for the timer to finish first.", "error");
-    return;
-  }
-  if (foundNonce === null) {
-    setStatus("⏳ Waiting for PoW to complete...", "error");
-    return;
-  }
-
-  isWorking = true;
-  try {
-    setStatus("⏳ Sending transaction...", "info");
-
-    var tx = await contract.claim(foundNonce, {
-      gasLimit: GAS_LIMIT_CLAIM
-    });
-
+    setStatus("⏳ Adding miner...", "info");
+    const tx = await contract.addMiner(addr, { value });
     setStatus("⏳ Waiting for confirmation...", "info");
     await tx.wait();
 
-    setStatus(
-      "🎉 Reward added to mined balance!<br>" +
-      "Withdraw to wallet once it reaches ≥ " + fmtLUX(cachedMinClaim) + " LUX.",
-      "success"
-    );
-    foundNonce = null;
-    powRunning = false;
-    cachedChallenge = null;
-    canClaimTime = false;
-    sessionStartTime = 0;
-    setPowInfo("PoW: idle");
-    setProgress(0);
-
-    updateUI();
+    setStatus(`✅ Miner added: ${shortAddr(addr)}`, "success");
+    $("addMinerAddress").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
   } catch (e) {
     console.error(e);
     setStatus("❌ " + decodeError(e), "error");
   } finally {
     isWorking = false;
   }
-}
+};
 
-async function handleWithdraw() {
-  if (isWorking) return;
+// ==================================================
+// ADD MINER BATCH
+// ==================================================
+$("addMinerBatchBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
   isWorking = true;
   try {
-    if (cachedPendingBalance < cachedMinClaim) {
-      setStatus("⚠️ Balance below minimum " + fmtLUX(cachedMinClaim) + " LUX.", "error");
-      return;
+    const raw = $("addMinerAddress").value.trim();
+    if (raw === "") throw new Error("Fill the input with comma-separated addresses");
+
+    const list = raw.split(",").map(s => s.trim()).filter(s => s !== "");
+    if (list.length === 0) throw new Error("No addresses");
+    for (const a of list) {
+      if (!ethers.utils.isAddress(a)) throw new Error("Invalid address: " + a);
     }
 
-    if (!confirm("Withdraw " + fmtLUX(cachedPendingBalance) + " LUX to your wallet?")) return;
+    const enabled = await contract.minerFeeEnabled();
+    const fee = await contract.minerFee();
+    const value = enabled ? fee.mul(list.length) : ethers.BigNumber.from(0);
+    const totalLabel = enabled ? `${fmtEth(value)} ETH` : "0 ETH (fee OFF)";
 
-    setStatus("⏳ Sending transaction...", "info");
+    if (!confirm(`Batch add ${list.length} miners:\n\nTotal fee: ${totalLabel}\n\nContinue?`)) return;
 
-    var tx = await contract.claimToWallet({
-      gasLimit: GAS_LIMIT_WITHDRAW
-    });
-
+    setStatus(`⏳ Adding ${list.length} miners...`, "info");
+    const tx = await contract.addMinerBatch(list, { value });
     setStatus("⏳ Waiting for confirmation...", "info");
     await tx.wait();
 
-    setStatus("🎉 Success! LUX sent to your wallet.", "success");
-    updateUI();
+    setStatus(`✅ Batch add complete (${list.length} addresses)`, "success");
+    $("addMinerAddress").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
   } catch (e) {
     console.error(e);
     setStatus("❌ " + decodeError(e), "error");
   } finally {
     isWorking = false;
   }
-}
+};
 
-function bindEventListeners() {
-  var btn = $("connectBtn");
-  if (btn) btn.addEventListener("click", function(e) { e.preventDefault(); doConnect(); });
+// ==================================================
+// CHECK MINER
+// ==================================================
+$("checkMinerBtn").onclick = async () => {
+  if (!contract) return;
+  try {
+    const addr = $("checkMinerAddress").value.trim();
+    if (!ethers.utils.isAddress(addr)) throw new Error("Invalid address");
 
-  var sw = $("switchNetBtn");
-  if (sw) sw.addEventListener("click", async function(e) {
-    e.preventDefault();
+    const [authorized, allowed, minedBal, canWd, needed] = await Promise.all([
+      contract.authorizedMiners(addr),
+      contract.isMinerAllowed(addr),
+      contract.getMinedBalance(addr),
+      contract.canWithdraw(addr),
+      contract.amountNeededToWithdraw(addr)
+    ]);
+
+    const el = $("minerCheckResult");
+    el.classList.remove("hidden");
+    el.innerHTML = `
+      <b>${addr}</b><br>
+      Authorized: <code>${authorized ? "YES" : "NO"}</code><br>
+      Allowed to mine: <code>${allowed ? "YES" : "NO"}</code><br>
+      Mined balance: <code>${fmtLUX(minedBal)} LUX</code><br>
+      Can withdraw: <code>${canWd ? "YES" : "NO"}</code><br>
+      Needed to withdraw: <code>${fmtLUX(needed)} LUX</code>
+    `;
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  }
+};
+
+// ==================================================
+// REMOVE MINER
+// ==================================================
+$("removeMinerBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const addr = $("removeMinerAddress").value.trim();
+    if (!ethers.utils.isAddress(addr)) throw new Error("Invalid address");
+
+    if (!confirm(`Remove miner: ${addr}?\n(No refund)`)) return;
+
+    setStatus("⏳ Removing miner...", "info");
+    const tx = await contract.removeMiner(addr);
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Miner removed: ${shortAddr(addr)}`, "success");
+    $("removeMinerAddress").value = "";
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// WITHDRAW FEES (to feeRecipient)
+// ==================================================
+$("withdrawFeesBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const accum = await contract.accumulatedFees();
+    if (accum.lte(0)) throw new Error("No fees accumulated");
+
+    const recip = await contract.feeRecipient();
+    if (!confirm(`Withdraw ${fmtEth(accum)} ETH to feeRecipient (${recip})?`)) return;
+
+    setStatus("⏳ Withdrawing fees...", "info");
+    const tx = await contract.withdrawFees();
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus(`✅ ${fmtEth(accum)} ETH sent to ${shortAddr(recip)}`, "success");
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// WITHDRAW FEES TO (custom address)
+// ==================================================
+$("withdrawFeesToBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const to = $("withdrawTo").value.trim();
+    if (!ethers.utils.isAddress(to)) throw new Error("Invalid destination address");
+
+    const accum = await contract.accumulatedFees();
+    if (accum.lte(0)) throw new Error("No fees accumulated");
+
+    if (!confirm(`Withdraw ${fmtEth(accum)} ETH to ${to}?`)) return;
+
+    setStatus("⏳ Withdrawing fees to...", "info");
+    const tx = await contract.withdrawFeesTo(to);
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus(`✅ ${fmtEth(accum)} ETH sent to ${shortAddr(to)}`, "success");
+    await Promise.all([loadFeeInfo(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// RESCUE - CREATE
+// ==================================================
+$("rescueBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const tokenStr = $("rescueToken").value.trim();
+    const amtStr = $("rescueAmount").value.trim();
+
+    if (amtStr === "") throw new Error("Amount is empty");
+
+    let token = ethers.constants.AddressZero;
+    if (tokenStr !== "") {
+      if (!ethers.utils.isAddress(tokenStr)) throw new Error("Invalid token address");
+      token = tokenStr;
+    }
+
+    let amount;
+    try { amount = ethers.BigNumber.from(amtStr); }
+    catch { throw new Error("Invalid amount (must be integer/wei)"); }
+    if (amount.lte(0)) throw new Error("Amount must be > 0");
+
+    const tokenLabel = token === ethers.constants.AddressZero
+      ? "POL"
+      : token.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()
+        ? "LUX"
+        : token;
+
+    if (!confirm(
+      `Create rescue request:\n\nToken: ${tokenLabel}\nAmount: ${amount.toString()}\n\n` +
+      `Available for execution after 24 hours.`
+    )) return;
+
+    setStatus("⏳ Creating rescue request...", "info");
+    const tx = await contract.createRescue(token, amount);
+    setStatus("⏳ Waiting for confirmation...", "info");
+    const receipt = await tx.wait();
+
+    let rescueId = "-";
     try {
-      setStatus("⏳ Switching to Sepolia...", "info");
-      await ensureSepolia();
-      await doConnect();
-    } catch (err) {
-      setStatus("❌ " + decodeError(err), "error");
+      const iface = contract.interface;
+      for (const log of receipt.logs) {
+        try {
+          const parsed = iface.parseLog(log);
+          if (parsed && parsed.name === "RescueCreated") {
+            rescueId = parsed.args.id;
+            break;
+          }
+        } catch {}
+      }
+    } catch {}
+
+    setStatus(`✅ Rescue created. ID: ${rescueId}`, "success");
+    $("rescueAmount").value = "";
+    if (rescueId !== "-") $("executeRescueId").value = rescueId;
+    await Promise.all([loadRescueList(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// RESCUE - LIST
+// ==================================================
+async function loadRescueList() {
+  if (!contract) return;
+  const listEl = $("rescueList");
+  try {
+    const ids = await contract.getRescueIds();
+    if (!ids || ids.length === 0) {
+      listEl.innerHTML = '<span class="label" style="font-size:12px;">No requests yet.</span>';
+      return;
     }
-  });
 
-  var sb = $("startBtn");
-  if (sb) sb.addEventListener("click", function(e) { e.preventDefault(); handleStartMining(); });
+    let html = "";
+    const start = Math.max(0, ids.length - 10);
+    for (let i = ids.length - 1; i >= start; i--) {
+      const id = ids[i];
+      const r = await contract.rescues(id);
+      const tokenLabel = r.token === ethers.constants.AddressZero
+        ? "POL"
+        : r.token.toLowerCase() === CONTRACT_ADDRESS.toLowerCase()
+          ? "LUX"
+          : shortAddr(r.token);
 
-  var cb = $("claimBtn");
-  if (cb) cb.addEventListener("click", function(e) { e.preventDefault(); handleClaim(); });
+      const now = Math.floor(Date.now() / 1000);
+      const ready = Number(r.executeAfter) <= now;
+      const status = r.executed
+        ? '<span style="color:#888">EXECUTED/CANCELLED</span>'
+        : ready
+          ? '<span style="color:var(--success)">READY TO EXECUTE</span>'
+          : `<span style="color:var(--gold)">Waiting (${new Date(Number(r.executeAfter) * 1000).toLocaleString("en-US")})</span>`;
 
-  var pb = $("payFeeBtn");
-  if (pb) pb.addEventListener("click", function(e) { e.preventDefault(); handlePayFee(); });
-
-  var wb = $("withdrawBtn");
-  if (wb) wb.addEventListener("click", function(e) { e.preventDefault(); handleWithdraw(); });
+      html += `
+        <div class="rescue-item">
+          <b>ID:</b> <code>${shortId(id)}</code><br>
+          <b>Token:</b> <code>${tokenLabel}</code><br>
+          <b>Amount:</b> <code>${r.amount.toString()}</code><br>
+          <b>Status:</b> ${status}<br>
+          <button class="btn-ghost" style="margin-top:8px;padding:8px;font-size:12px;"
+            onclick="document.getElementById('executeRescueId').value='${id}'">
+            Use this ID
+          </button>
+        </div>
+      `;
+    }
+    listEl.innerHTML = html;
+  } catch (e) {
+    console.error("loadRescueList error:", e);
+  }
 }
 
-function bindWalletListeners() {
-  if (!window.ethereum || window.__luxListenersBound) return;
+// ==================================================
+// RESCUE - EXECUTE
+// ==================================================
+$("executeRescueBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const id = $("executeRescueId").value.trim();
+    if (!id.startsWith("0x") || id.length !== 66) throw new Error("Invalid rescue ID");
+
+    if (!confirm(`Execute rescue ${id}?`)) return;
+
+    setStatus("⏳ Executing rescue...", "info");
+    const tx = await contract.executeRescue(id);
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Rescue executed: ${shortId(id)}`, "success");
+    await Promise.all([loadRescueList(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// RESCUE - CANCEL
+// ==================================================
+$("cancelRescueBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    const id = $("executeRescueId").value.trim();
+    if (!id.startsWith("0x") || id.length !== 66) throw new Error("Invalid rescue ID");
+
+    if (!confirm(`Cancel rescue ${id}?`)) return;
+
+    setStatus("⏳ Cancelling rescue...", "info");
+    const tx = await contract.cancelRescue(id);
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+
+    setStatus(`✅ Rescue cancelled: ${shortId(id)}`, "success");
+    await Promise.all([loadRescueList(), loadAllInfo()]);
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// PAUSE / UNPAUSE
+// ==================================================
+$("pauseBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    setStatus("⏳ Pausing mining...", "info");
+    const tx = await contract.pause();
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+    setStatus("✅ Mining paused", "success");
+    await loadAllInfo();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+$("unpauseBtn").onclick = async () => {
+  if (isWorking || !isOwner) return;
+  isWorking = true;
+  try {
+    setStatus("⏳ Unpausing mining...", "info");
+    const tx = await contract.unpause();
+    setStatus("⏳ Waiting for confirmation...", "info");
+    await tx.wait();
+    setStatus("✅ Mining active again", "success");
+    await loadAllInfo();
+  } catch (e) {
+    console.error(e);
+    setStatus("❌ " + decodeError(e), "error");
+  } finally {
+    isWorking = false;
+  }
+};
+
+// ==================================================
+// EVENT LISTENERS
+// ==================================================
+if (window.ethereum && !window.__luxListenersBound) {
   window.__luxListenersBound = true;
 
-  window.ethereum.on("accountsChanged", function(accs) {
+  window.ethereum.on("accountsChanged", (accs) => {
     if (!accs || accs.length === 0) {
-      setStatus("🔒 Wallet disconnected", "error");
+      setStatus("🔒 Wallet disconnected. Click Connect again.", "error");
       $("connectBtn").style.display = "block";
-      ["statsCard", "minerCard", "miningCard", "pendingCard"].forEach(function(id) {
+      ["infoCard", "feeCard", "minerCard", "withdrawCard", "rescueCard", "pauseCard"].forEach(id => {
         $(id).classList.add("hidden");
       });
-      if (timerInterval) clearInterval(timerInterval);
-      if (syncInterval) clearInterval(syncInterval);
       return;
     }
     doConnect();
   });
 
-  window.ethereum.on("chainChanged", function(hex) {
-    var id = parseInt(hex, 16);
+  window.ethereum.on("chainChanged", (chainIdHex) => {
+    const id = parseInt(chainIdHex, 16);
     if (id === SEPOLIA_CHAIN_ID_DEC) {
       doConnect();
     } else {
-      $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Moved from Sepolia. Click Switch to Sepolia.", "error");
+      setStatus("⚠️ Moved from Sepolia. Please switch back to Sepolia.", "error");
     }
   });
 }
 
-async function init() {
-  bindEventListeners();
-
-  if (typeof ethers === "undefined") {
-    setStatus("❌ ethers library failed to load.", "error");
+// ==================================================
+// AUTO RECONNECT
+// ==================================================
+window.addEventListener("load", async () => {
+  if (!window.ethereum) {
+    setStatus("Not connected · Install MetaMask");
     return;
   }
-
-  if (!hasInjectedWallet()) {
-    if (isMobile()) {
-      var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
-      setStatus(
-        '💡 Open this page in <b>MetaMask Browser</b> to connect your wallet.<br><br>' +
-        '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
-        'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;">' +
-        '🦊 Open in MetaMask</a>',
-        "info"
-      );
-    } else {
-      setStatus("💡 Install MetaMask to connect your wallet.", "info");
-    }
-    return;
-  }
-
-  bindWalletListeners();
 
   try {
-    var accs = await window.ethereum.request({ method: "eth_accounts" });
-    var chain = await window.ethereum.request({ method: "eth_chainId" });
-
-    if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
-      $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Wrong network. Click the switch button above.", "error");
-      if (accs && accs.length > 0) userAddress = accs[0];
-      return;
-    }
-
-    if (accs && accs.length > 0) {
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    if (accounts && accounts.length > 0) {
       doConnect();
     } else {
-      setStatus("👋 Click <b>Connect Wallet</b> to get started.", "");
+      setStatus("Not connected");
     }
-  } catch (e) {
-    console.error("Auto reconnect error:", e);
-    setStatus("👋 Click <b>Connect Wallet</b> to get started.", "");
+  } catch {
+    setStatus("Not connected");
   }
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
+});
 </script>
 </body>
 </html>
