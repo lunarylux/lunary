@@ -10,25 +10,38 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Lunary (LUX)
- * @notice Fair launch token: PoW mining, 4x halving, tanpa tax
- * @dev Decimals 8, max supply 112.333, rescue LUX tidak ganggu mining
+ * @notice Fair launch PoW mining token with 4x halving, no tax.
+ *         Decimals 8, max supply 112,333.
  */
 contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     using SafeERC20 for IERC20;
 
-    // ============ KONSTANTA TOKEN ============
+    // ============ TOKEN CONSTANTS ============
     uint8 private constant _DECIMALS = 8;
     uint256 public constant MAX_SUPPLY = 112_333 * 10**_DECIMALS;
 
-    // ============ KONSTANTA MINING ============
+    // ============ MINING CONSTANTS ============
     uint256 public constant MINING_DURATION = 4 hours;
     uint256 public constant TOKENS_PER_CLAIM = 1 * 10**_DECIMALS;
     uint256 public constant CLAIMS_PER_EPOCH = 59_911;
     uint256 public constant MAX_HALVINGS = 4;
 
-    // ============ KONSTANTA KEAMANAN ============
+    // ============ SECURITY CONSTANTS ============
     uint256 public constant DIFFICULTY = 100_000;
     uint256 public constant RESCUE_DELAY = 1 days;
+
+    // ============ FEE DEFAULT ============
+    uint256 public constant DEFAULT_MINER_FEE = 1 ether;
+
+    // ============ MIN CLAIM TO WALLET ============
+    // Base minimum: 20 LUX at epoch 0.
+    // Actual value halves with each epoch:
+    //   Epoch 0: 20 LUX
+    //   Epoch 1: 10 LUX
+    //   Epoch 2: 5 LUX
+    //   Epoch 3: 2.5 LUX
+    //   Epoch 4+: 1.25 LUX
+    uint256 public constant BASE_MIN_CLAIM = 20 * 10**_DECIMALS;
 
     // ============ STATE ============
     uint256 public totalClaims;
@@ -43,7 +56,7 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     mapping(address => Session) public sessions;
 
     struct Rescue {
-        address token; // address(0) = POL, address(this) = LUX, lain = ERC-20
+        address token;
         uint256 amount;
         uint256 executeAfter;
         bool executed;
@@ -51,23 +64,47 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
     mapping(bytes32 => Rescue) public rescues;
     bytes32[] public rescueIds;
 
-    // ============ EVENT ============
+    // ============ MINER FEE STATE ============
+    bool public minerFeeEnabled;
+    uint256 public minerFee;
+    address public feeRecipient;
+    uint256 public accumulatedFees;
+    mapping(address => bool) public authorizedMiners;
+    uint256 public totalAuthorizedMiners;
+
+    // ============ PENDING CLAIM STATE ============
+    mapping(address => uint256) public minedBalance;
+    uint256 public totalPendingClaims;
+
+    // ============ EVENTS ============
     event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge);
     event MiningClaimed(address indexed user, uint256 reward, uint256 epoch);
     event MiningCancelled(address indexed user);
     event RescueCreated(bytes32 indexed id, address token, uint256 amount, uint256 executeAfter);
     event RescueExecuted(bytes32 indexed id, address token, uint256 amount);
     event RescueCancelled(bytes32 indexed id);
+    event MinerFeeUpdated(uint256 oldFee, uint256 newFee);
+    event MinerFeeEnabledUpdated(bool enabled);
+    event FeeRecipientUpdated(address oldRecipient, address newRecipient);
+    event MinerAdded(address indexed miner, uint256 feePaid, address indexed payer);
+    event MinerRemoved(address indexed miner);
+    event FeesWithdrawn(address indexed to, uint256 amount);
+    event MinedAccumulated(address indexed user, uint256 amount, uint256 newBalance);
+    event WithdrawnToWallet(address indexed user, uint256 amount);
 
     // ============ CONSTRUCTOR ============
-    constructor() ERC20("Lunary", "LUX") Ownable(msg.sender) {}
+    constructor() ERC20("Lunary", "LUX") Ownable(msg.sender) {
+        minerFeeEnabled = true;
+        minerFee = DEFAULT_MINER_FEE;
+        feeRecipient = msg.sender;
+    }
 
     // ============ DECIMALS ============
     function decimals() public pure override returns (uint8) {
         return _DECIMALS;
     }
 
-    // ============ VIEW ============
+    // ============ VIEWS ============
     function currentEpoch() public view returns (uint256) {
         return totalClaims / CLAIMS_PER_EPOCH;
     }
@@ -76,6 +113,16 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         uint256 halvings = currentEpoch();
         if (halvings >= MAX_HALVINGS) return 0;
         return TOKENS_PER_CLAIM >> halvings;
+    }
+
+    /// @notice Minimum LUX required to withdraw mined balance to wallet.
+    ///         Halves automatically with each epoch.
+    function minClaimAmount() public view returns (uint256) {
+        uint256 halvings = currentEpoch();
+        if (halvings >= MAX_HALVINGS) {
+            return BASE_MIN_CLAIM >> MAX_HALVINGS;
+        }
+        return BASE_MIN_CLAIM >> halvings;
     }
 
     function canClaim(address user) public view returns (bool) {
@@ -108,11 +155,35 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         return DIFFICULTY;
     }
 
+    function isMinerAllowed(address user) public view returns (bool) {
+        if (!minerFeeEnabled) return true;
+        return authorizedMiners[user];
+    }
+
+    function canWithdraw(address user) public view returns (bool) {
+        return minedBalance[user] >= minClaimAmount();
+    }
+
+    function getMinedBalance(address user) external view returns (uint256) {
+        return minedBalance[user];
+    }
+
+    function amountNeededToWithdraw(address user) external view returns (uint256) {
+        uint256 bal = minedBalance[user];
+        uint256 minRequired = minClaimAmount();
+        if (bal >= minRequired) return 0;
+        return minRequired - bal;
+    }
+
     // ============ MINING ============
     function startMining(bytes32 clientSeed) external nonReentrant whenNotPaused {
-        require(!sessions[msg.sender].active, "Sudah mining");
-        require(currentReward() > 0, "Mining selesai");
-        require(totalMined < MAX_SUPPLY, "Max supply tercapai");
+        if (minerFeeEnabled) {
+            require(authorizedMiners[msg.sender], "Miner not registered, pay fee first");
+        }
+
+        require(!sessions[msg.sender].active, "Already mining");
+        require(currentReward() > 0, "Mining finished");
+        require(totalMined < MAX_SUPPLY, "Max supply reached");
 
         bytes32 challenge = keccak256(abi.encodePacked(
             blockhash(block.number - 1),
@@ -133,57 +204,175 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
 
     function claim(uint256 nonce) external nonReentrant whenNotPaused {
         Session storage s = sessions[msg.sender];
-        require(s.active, "Belum mulai mining");
-        require(!s.claimed, "Sudah claim");
-        require(block.timestamp >= s.startTime + MINING_DURATION, "Belum 4 jam");
+        require(s.active, "Mining not started");
+        require(!s.claimed, "Already claimed");
+        require(block.timestamp >= s.startTime + MINING_DURATION, "4 hours not passed");
 
-        // Verifikasi PoW
         bytes32 hash = keccak256(abi.encodePacked(s.challenge, msg.sender, nonce));
         uint256 target = type(uint256).max / DIFFICULTY;
-        require(uint256(hash) < target, "PoW tidak valid");
+        require(uint256(hash) < target, "Invalid PoW");
 
         uint256 reward = currentReward();
-        require(reward > 0, "Mining selesai");
-        require(totalMined + reward <= MAX_SUPPLY, "Max supply tercapai");
+        require(reward > 0, "Mining finished");
+        require(totalMined + reward <= MAX_SUPPLY, "Max supply reached");
 
         s.claimed = true;
         s.active = false;
         totalMined += reward;
         totalClaims++;
 
-        _mint(msg.sender, reward);
+        _mint(address(this), reward);
+        minedBalance[msg.sender] += reward;
+        totalPendingClaims += reward;
+
         emit MiningClaimed(msg.sender, reward, currentEpoch());
+        emit MinedAccumulated(msg.sender, reward, minedBalance[msg.sender]);
+    }
+
+    function claimToWallet() external nonReentrant whenNotPaused {
+        uint256 balance = minedBalance[msg.sender];
+        uint256 minRequired = minClaimAmount();
+        require(balance >= minRequired, "Below minimum claim");
+
+        minedBalance[msg.sender] = 0;
+        totalPendingClaims -= balance;
+
+        _transfer(address(this), msg.sender, balance);
+
+        emit WithdrawnToWallet(msg.sender, balance);
     }
 
     function cancelMining() external nonReentrant {
         Session storage s = sessions[msg.sender];
-        require(s.active, "Tidak ada session");
-        require(!s.claimed, "Sudah claim");
-        require(block.timestamp < s.startTime + MINING_DURATION, "Sudah 4 jam");
+        require(s.active, "No active session");
+        require(!s.claimed, "Already claimed");
+        require(block.timestamp < s.startTime + MINING_DURATION, "4 hours passed");
 
         s.active = false;
         emit MiningCancelled(msg.sender);
     }
 
-    // ============ TERIMA POL / ERC-20 ============
+    // ============ MINER FEE MANAGEMENT ============
+    function setMinerFee(uint256 newFee) external onlyOwner {
+        uint256 oldFee = minerFee;
+        minerFee = newFee;
+        emit MinerFeeUpdated(oldFee, newFee);
+    }
+
+    function setMinerFeeEnabled(bool enabled) external onlyOwner {
+        minerFeeEnabled = enabled;
+        emit MinerFeeEnabledUpdated(enabled);
+    }
+
+    function setFeeRecipient(address newRecipient) external onlyOwner {
+        require(newRecipient != address(0), "Recipient is zero");
+        address oldRecipient = feeRecipient;
+        feeRecipient = newRecipient;
+        emit FeeRecipientUpdated(oldRecipient, newRecipient);
+    }
+
+    function addMiner(address miner) external payable nonReentrant whenNotPaused {
+        require(miner != address(0), "Miner address is zero");
+        require(!authorizedMiners[miner], "Miner already registered");
+
+        uint256 requiredFee = minerFeeEnabled ? minerFee : 0;
+        require(msg.value >= requiredFee, "Insufficient fee");
+
+        authorizedMiners[miner] = true;
+        totalAuthorizedMiners++;
+
+        if (msg.value > 0) {
+            accumulatedFees += msg.value;
+        }
+
+        if (msg.value > requiredFee) {
+            uint256 refund = msg.value - requiredFee;
+            (bool ok, ) = msg.sender.call{value: refund}("");
+            require(ok, "Refund failed");
+        }
+
+        emit MinerAdded(miner, requiredFee, msg.sender);
+    }
+
+    function addMinerBatch(address[] calldata miners) external payable nonReentrant whenNotPaused {
+        uint256 len = miners.length;
+        require(len > 0, "Empty array");
+
+        uint256 requiredFee = minerFeeEnabled ? minerFee : 0;
+        uint256 totalRequired = requiredFee * len;
+        require(msg.value >= totalRequired, "Insufficient fee");
+
+        uint256 added;
+        for (uint256 i = 0; i < len; i++) {
+            address m = miners[i];
+            if (m == address(0) || authorizedMiners[m]) continue;
+            authorizedMiners[m] = true;
+            totalAuthorizedMiners++;
+            added++;
+            emit MinerAdded(m, requiredFee, msg.sender);
+        }
+
+        require(added > 0, "No new miners");
+
+        uint256 used = requiredFee * added;
+        if (used > 0) {
+            accumulatedFees += used;
+        }
+
+        if (msg.value > used) {
+            uint256 refund = msg.value - used;
+            (bool ok, ) = msg.sender.call{value: refund}("");
+            require(ok, "Refund failed");
+        }
+    }
+
+    function removeMiner(address miner) external onlyOwner {
+        require(authorizedMiners[miner], "Miner not registered");
+        authorizedMiners[miner] = false;
+        if (totalAuthorizedMiners > 0) {
+            totalAuthorizedMiners--;
+        }
+        emit MinerRemoved(miner);
+    }
+
+    function withdrawFees() external nonReentrant {
+        uint256 amount = accumulatedFees;
+        require(amount > 0, "No fees");
+        accumulatedFees = 0;
+
+        address to = feeRecipient;
+        (bool ok, ) = to.call{value: amount}("");
+        require(ok, "Withdraw failed");
+
+        emit FeesWithdrawn(to, amount);
+    }
+
+    function withdrawFeesTo(address to) external onlyOwner nonReentrant {
+        require(to != address(0), "To address is zero");
+        uint256 amount = accumulatedFees;
+        require(amount > 0, "No fees");
+        accumulatedFees = 0;
+
+        (bool ok, ) = to.call{value: amount}("");
+        require(ok, "Withdraw failed");
+
+        emit FeesWithdrawn(to, amount);
+    }
+
+    // ============ RECEIVE ============
     receive() external payable {}
 
     // ============ RESCUE ============
-    /**
-     * @notice Buat rescue untuk token yang salah kirim
-     * @param token address(0) = POL, address(this) = LUX, lain = ERC-20
-     * @param amount Jumlah yang di-rescue
-     * @dev Rescue LUX TIDAK mengubah totalMined / totalClaims / epoch
-     */
     function createRescue(address token, uint256 amount) external onlyOwner returns (bytes32) {
-        require(amount > 0, "Amount 0");
+        require(amount > 0, "Amount is zero");
 
         if (token == address(0)) {
-            require(amount <= address(this).balance, "Saldo POL kurang");
+            require(amount <= address(this).balance, "Insufficient POL balance");
         } else if (token == address(this)) {
-            require(amount <= balanceOf(address(this)), "Saldo LUX kurang");
+            uint256 availableLUX = balanceOf(address(this)) - totalPendingClaims;
+            require(amount <= availableLUX, "Insufficient LUX (pending claims)");
         } else {
-            require(IERC20(token).balanceOf(address(this)) >= amount, "Saldo ERC-20 kurang");
+            require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient ERC20 balance");
         }
 
         bytes32 id = keccak256(abi.encodePacked(token, amount, block.timestamp, block.number));
@@ -201,23 +390,21 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         return id;
     }
 
-    /**
-     * @notice Execute rescue setelah 1 hari
-     * @dev SELALU ke owner. Rescue LUX = transfer biasa.
-     */
     function executeRescue(bytes32 id) external onlyOwner nonReentrant {
         Rescue storage r = rescues[id];
-        require(r.executeAfter > 0, "ID tidak ada");
-        require(!r.executed, "Sudah execute");
-        require(block.timestamp >= r.executeAfter, "Belum waktunya");
+        require(r.executeAfter > 0, "ID not found");
+        require(!r.executed, "Already executed");
+        require(block.timestamp >= r.executeAfter, "Not yet available");
 
         r.executed = true;
         address ownerAddr = owner();
 
         if (r.token == address(0)) {
             (bool ok, ) = ownerAddr.call{value: r.amount}("");
-            require(ok, "Transfer POL gagal");
+            require(ok, "POL transfer failed");
         } else if (r.token == address(this)) {
+            uint256 availableLUX = balanceOf(address(this)) - totalPendingClaims;
+            require(r.amount <= availableLUX, "Insufficient LUX (pending claims)");
             _transfer(address(this), ownerAddr, r.amount);
         } else {
             IERC20(r.token).safeTransfer(ownerAddr, r.amount);
@@ -228,8 +415,8 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
 
     function cancelRescue(bytes32 id) external onlyOwner {
         Rescue storage r = rescues[id];
-        require(r.executeAfter > 0, "ID tidak ada");
-        require(!r.executed, "Sudah execute");
+        require(r.executeAfter > 0, "ID not found");
+        require(!r.executed, "Already executed");
         r.executed = true;
         emit RescueCancelled(id);
     }
@@ -243,7 +430,7 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
         _unpause();
     }
 
-    // ============ GETTER ============
+    // ============ GETTERS ============
     function getRescueIds() external view returns (bytes32[] memory) {
         return rescueIds;
     }
@@ -262,5 +449,11 @@ contract Lunary is ERC20, ReentrancyGuard, Pausable, Ownable {
 
     function getLUXBalance() external view returns (uint256) {
         return balanceOf(address(this));
+    }
+
+    function getAvailableLUXForRescue() external view returns (uint256) {
+        uint256 balance = balanceOf(address(this));
+        if (balance <= totalPendingClaims) return 0;
+        return balance - totalPendingClaims;
     }
 }
