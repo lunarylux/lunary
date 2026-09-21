@@ -32,7 +32,6 @@
     overflow-x: hidden;
   }
 
-  /* Animated gradient background */
   body::before {
     content: '';
     position: fixed;
@@ -44,7 +43,6 @@
     z-index: -2;
   }
 
-  /* Star particles */
   body::after {
     content: '';
     position: fixed;
@@ -75,7 +73,6 @@
     padding: 28px 20px 60px;
   }
 
-  /* Header */
   .header {
     display: flex;
     flex-direction: column;
@@ -101,9 +98,7 @@
     animation: spin 8s linear infinite;
   }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   .logo {
     position: relative;
@@ -116,7 +111,6 @@
     display: block;
   }
 
-  /* Fallback moon kalau logo gagal load */
   .logo-fallback {
     position: absolute;
     inset: 0;
@@ -126,7 +120,6 @@
     font-size: 44px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #2a2a4a, #0a0a1a);
-    z-index: -1;
   }
 
   h1 {
@@ -147,7 +140,6 @@
     text-transform: uppercase;
   }
 
-  /* Cards */
   .card {
     background: var(--card);
     border: 1px solid var(--card-border);
@@ -159,9 +151,7 @@
     transition: border-color 0.3s;
   }
 
-  .card:hover {
-    border-color: rgba(167,139,250,0.3);
-  }
+  .card:hover { border-color: rgba(167,139,250,0.3); }
 
   .row {
     display: flex;
@@ -171,9 +161,7 @@
     font-size: 14px;
   }
 
-  .row + .row {
-    border-top: 1px solid rgba(255,255,255,0.04);
-  }
+  .row + .row { border-top: 1px solid rgba(255,255,255,0.04); }
 
   .label { color: var(--muted); }
   .value {
@@ -189,11 +177,7 @@
     background-clip: text;
   }
 
-  /* Timer */
-  .timer-card {
-    text-align: center;
-    padding: 26px 20px;
-  }
+  .timer-card { text-align: center; padding: 26px 20px; }
 
   #timer {
     font-size: 44px;
@@ -215,7 +199,6 @@
     text-transform: uppercase;
   }
 
-  /* Progress bar */
   .progress-wrap {
     margin-top: 16px;
     height: 6px;
@@ -241,7 +224,6 @@
     min-height: 16px;
   }
 
-  /* Buttons */
   button {
     width: 100%;
     padding: 16px;
@@ -256,13 +238,8 @@
     letter-spacing: 0.3px;
   }
 
-  button:not(:disabled):hover {
-    transform: translateY(-1px);
-  }
-
-  button:not(:disabled):active {
-    transform: translateY(0);
-  }
+  button:not(:disabled):hover { transform: translateY(-1px); }
+  button:not(:disabled):active { transform: translateY(0); }
 
   #connectBtn {
     background: rgba(255,255,255,0.08);
@@ -271,9 +248,7 @@
     margin-bottom: 16px;
   }
 
-  #connectBtn:hover {
-    background: rgba(255,255,255,0.12);
-  }
+  #connectBtn:hover { background: rgba(255,255,255,0.12); }
 
   #startBtn {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -281,9 +256,7 @@
     box-shadow: 0 6px 20px rgba(167,139,250,0.35);
   }
 
-  #startBtn:not(:disabled):hover {
-    box-shadow: 0 8px 26px rgba(167,139,250,0.5);
-  }
+  #startBtn:not(:disabled):hover { box-shadow: 0 8px 26px rgba(167,139,250,0.5); }
 
   #startBtn:disabled {
     background: rgba(255,255,255,0.05);
@@ -298,9 +271,7 @@
     box-shadow: 0 6px 20px rgba(251,191,36,0.3);
   }
 
-  #claimBtn:not(:disabled):hover {
-    box-shadow: 0 8px 26px rgba(251,191,36,0.45);
-  }
+  #claimBtn:not(:disabled):hover { box-shadow: 0 8px 26px rgba(251,191,36,0.45); }
 
   #claimBtn:disabled {
     background: rgba(255,255,255,0.05);
@@ -309,7 +280,6 @@
     box-shadow: none;
   }
 
-  /* Status */
   #status {
     text-align: center;
     font-size: 13px;
@@ -325,7 +295,6 @@
   #status.success { color: var(--success); border-color: rgba(52,211,153,0.3); }
   #status.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
 
-  /* Footer */
   .footer {
     text-align: center;
     font-size: 11px;
@@ -333,19 +302,22 @@
     margin-top: 24px;
   }
 
-  .footer a {
-    color: var(--primary);
-    text-decoration: none;
-  }
+  .footer a { color: var(--primary); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
 
-  .footer a:hover {
-    text-decoration: underline;
-  }
-
-  /* Hidden */
   .hidden { display: none !important; }
 
-  /* Responsive */
+  .network-warn {
+    text-align: center;
+    font-size: 12px;
+    color: #fbbf24;
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+
   @media (max-width: 400px) {
     #timer { font-size: 36px; }
     h1 { font-size: 26px; }
@@ -360,23 +332,23 @@
   <div class="header">
     <div class="logo-wrap">
       <div class="logo-fallback">🌙</div>
-      <img
-        id="logo"
-        class="logo"
-        src="https://lunary.xyz/asset/lunary.png"
-        alt="Lunary Logo"
-        onerror="this.style.display='none';"
-      />
+      <img id="logo" class="logo" src="https://lunary.xyz/asset/lunary.png"
+           alt="Lunary Logo" onerror="this.style.display='none';" />
     </div>
     <h1>Lunary</h1>
     <div class="tagline">LUX · PoW Mining · 4× Halving</div>
+  </div>
+
+  <!-- NETWORK WARNING -->
+  <div id="networkWarn" class="network-warn hidden">
+    ⚠️ Jaringan salah. Silakan switch ke <b>Sepolia Testnet</b>.
   </div>
 
   <!-- CONNECT -->
   <button id="connectBtn">🔌 Connect Wallet</button>
 
   <!-- STATS -->
-  <div class="card" id="statsCard" style="display:none;">
+  <div class="card hidden" id="statsCard">
     <div class="row">
       <span class="label">Wallet</span>
       <span class="value" id="wallet">-</span>
@@ -395,19 +367,23 @@
     </div>
     <div class="row">
       <span class="label">Max supply</span>
-      <span class="value" id="maxSupply">112.333 LUX</span>
+      <span class="value" id="maxSupply">-</span>
+    </div>
+    <div class="row" id="feeRow">
+      <span class="label">Entry fee (address baru)</span>
+      <span class="value" id="feeInfo">-</span>
     </div>
   </div>
 
   <!-- MINING -->
-  <div class="card timer-card" id="miningCard" style="display:none;">
+  <div class="card timer-card hidden" id="miningCard">
     <div id="timer">--:--:--</div>
     <div id="timerLabel">Waktu mining</div>
 
     <div class="progress-wrap">
       <div id="progressBar"></div>
     </div>
-    <div class="pow-info" id="powProgress">PoW: siap</div>
+    <div class="pow-info" id="powProgress">PoW: idle</div>
 
     <div style="margin-top:20px;">
       <button id="startBtn" disabled>▶️ Mulai Mining</button>
@@ -424,271 +400,504 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<!-- Ethers v5.7.1 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
+
 <script>
 // ==================================================
-// GANTI DENGAN ALAMAT CONTRACT ANDA
+// KONFIGURASI
 // ==================================================
-const CONTRACT_ADDRESS = "0x...";
+const CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
+const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111
+const SEPOLIA_CHAIN_ID_DEC = 11155111;
 
+// ABI sesuai kontrak final (2 transaksi, entry fee, getServerTime, dll)
 const ABI = [
-  "function startMining(bytes32) external",
-  "function claim(uint256) external",
-  "function canClaim(address) view returns (bool)",
-  "function timeRemaining(address) view returns (uint256)",
+  // view
+  "function getServerTime() view returns (uint256)",
+  "function getMiningConfig() view returns (uint256 miningDuration, uint256 difficulty, uint256 maxNonce, bool feeEnabled, uint256 feeAmount)",
   "function currentReward() view returns (uint256)",
   "function currentEpoch() view returns (uint256)",
   "function totalMined() view returns (uint256)",
-  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
+  "function totalClaims() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MINING_DURATION() view returns (uint256)",
   "function DIFFICULTY() view returns (uint256)",
-  "function MAX_SUPPLY() view returns (uint256)"
+  "function MAX_NONCE() view returns (uint256)",
+  "function entryFeeEnabled() view returns (bool)",
+  "function entryFee() view returns (uint256)",
+  "function hasMinedBefore(address) view returns (bool)",
+  "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
+  "function canClaim(address) view returns (bool)",
+  "function timeRemaining(address) view returns (uint256)",
+  "function canStartMining(address) view returns (bool)",
+  "function getEntryFeeInfo() view returns (bool enabled, uint256 amount)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  // write
+  "function startMining(bytes32 secret, bytes32 clientSeed) payable",
+  "function claim(uint256 nonce)",
+  "function cancelMining()",
+  // events
+  "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge, uint256 endsAt)",
+  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)"
 ];
 
-const MINING_DURATION = 4 * 3600; // 4 jam dalam detik
-
+// ==================================================
+// STATE
+// ==================================================
 let provider, signer, contract, userAddress;
-let timerInterval, powInterval;
+let timerInterval = null;
+let powWorker = null;
 let foundNonce = null;
 let sessionStartTime = 0;
+let cachedConfig = {
+  miningDuration: 14400,
+  difficulty: 100000000n,
+  maxNonce: 5000000n,
+  feeEnabled: true,
+  feeAmount: 0n
+};
+let cachedChallenge = null;
+let currentState = "idle"; // idle | mining | ready | claimed
+let isWorking = false;
 
 const $ = (id) => document.getElementById(id);
 
 // ==================================================
+// HELPERS
+// ==================================================
+function shortAddr(a) { return a.slice(0, 6) + "..." + a.slice(-4); }
+function p2(n) { return String(n).padStart(2, "0"); }
+
+function fmtLUX(v, decimals = 8) {
+  try {
+    const s = ethers.utils.formatUnits(v, decimals);
+    const n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toLocaleString("id-ID", { maximumFractionDigits: 8 });
+  } catch { return v.toString(); }
+}
+
+function setStatus(msg, type = "") {
+  const el = $("status");
+  el.innerText = msg;
+  el.className = type;
+}
+
+function setProgress(pct) {
+  $("progressBar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+}
+
+function setPowInfo(msg) {
+  $("powProgress").innerText = msg;
+}
+
+// ==================================================
+// WEB WORKER (inline, untuk brute-force nonce)
+// ==================================================
+function buildWorkerBlob() {
+  const code = `
+    self.onmessage = function(e) {
+      const { challenge, user, maxNonce, difficulty, startNonce } = e.data;
+      // target = 2^256 / difficulty
+      const MAX_UINT = (1n << 256n) - 1n;
+      const target = MAX_UINT / BigInt(difficulty);
+
+      // keccak256 kecil manual? Kita pakai implementasi via importScripts tidak bisa,
+      // jadi brute force dikirim balik ke main thread per batch.
+      // Worker ini hanya untuk "tick" supaya UI tidak freeze.
+      self.postMessage({ type: "ready" });
+    };
+  `;
+  return new Blob([code], { type: "application/javascript" });
+}
+
+// Karena ethers v5 tidak punya keccak di worker tanpa import,
+// kita brute force di main thread tapi pakai chunk + setTimeout
+// supaya UI tetap responsif.
+async function bruteForceNonce(challenge, maxNonce, difficulty) {
+  const MAX_UINT = (1n << 256n) - 1n;
+  const target = MAX_UINT / BigInt(difficulty);
+  const batch = 300;
+  let nonce = 0;
+  let hashCount = 0;
+  const startTime = Date.now();
+
+  return new Promise((resolve) => {
+    function tick() {
+      if (foundNonce !== null) { resolve(null); return; }
+
+      for (let i = 0; i < batch; i++) {
+        if (nonce > Number(maxNonce)) {
+          setPowInfo("❌ Nonce habis, coba cancel & start ulang");
+          resolve(null);
+          return;
+        }
+        const hash = ethers.utils.solidityKeccak256(
+          ["bytes32", "address", "uint256"],
+          [challenge, userAddress, nonce]
+        );
+        hashCount++;
+        if (BigInt(hash) < target) {
+          foundNonce = nonce;
+          setPowInfo(`✅ PoW selesai! Nonce: ${nonce.toLocaleString("id-ID")}`);
+          resolve(nonce);
+          return;
+        }
+        nonce++;
+      }
+
+      const elapsed = (Date.now() - startTime) / 1000;
+      const rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
+      setPowInfo(
+        `PoW: ${hashCount.toLocaleString("id-ID")} hash · ${rate.toLocaleString("id-ID")} H/s · nonce ${nonce.toLocaleString("id-ID")}`
+      );
+
+      // lanjut di frame berikutnya
+      setTimeout(tick, 0);
+    }
+    tick();
+  });
+}
+
+// ==================================================
 // CONNECT WALLET
 // ==================================================
-$('connectBtn').onclick = async () => {
+$("connectBtn").onclick = async () => {
   if (!window.ethereum) {
     setStatus("❌ Install MetaMask dulu!", "error");
     return;
   }
   try {
-    provider = new ethers.BrowserProvider(window.ethereum);
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
     await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
+
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== SEPOLIA_CHAIN_ID_DEC) {
+      $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Silakan switch ke Sepolia Testnet", "error");
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: SEPOLIA_CHAIN_ID }],
+        });
+      } catch (e) {
+        setStatus("❌ Gagal switch network: " + (e.message || e), "error");
+        return;
+      }
+    } else {
+      $("networkWarn").classList.add("hidden");
+    }
+
+    signer = provider.getSigner();
     contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
     userAddress = await signer.getAddress();
 
-    $('wallet').innerText = shortAddr(userAddress);
-    $('connectBtn').style.display = 'none';
-    $('statsCard').style.display = 'block';
-    $('miningCard').style.display = 'block';
-    setStatus("Connected ✅", "success");
+    $("wallet").innerText = shortAddr(userAddress);
+    $("connectBtn").style.display = "none";
+    $("statsCard").classList.remove("hidden");
+    $("miningCard").classList.remove("hidden");
+    setStatus("✅ Connected", "success");
+
+    // muat config dari kontrak
+    await loadConfig();
+
+    // cek sesi tersimpan (kalau ada mining yang berjalan)
+    await restoreSession();
 
     await updateUI();
+
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(updateTimer, 1000);
 
-    window.ethereum.on('accountsChanged', () => location.reload());
-    window.ethereum.on('chainChanged', () => location.reload());
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged", () => location.reload());
   } catch (e) {
+    console.error(e);
     setStatus("❌ " + (e.message || e), "error");
   }
 };
 
 // ==================================================
-// UPDATE UI
+// LOAD CONFIG DARI KONTRAK
+// ==================================================
+async function loadConfig() {
+  try {
+    const cfg = await contract.getMiningConfig();
+    cachedConfig = {
+      miningDuration: Number(cfg.miningDuration),
+      difficulty: cfg.difficulty,
+      maxNonce: cfg.maxNonce,
+      feeEnabled: cfg.feeEnabled,
+      feeAmount: cfg.feeAmount,
+    };
+
+    const [hasMined, feeInfo] = await Promise.all([
+      contract.hasMinedBefore(userAddress),
+      contract.getEntryFeeInfo(),
+    ]);
+
+    if (feeInfo.enabled && !hasMined) {
+      $("feeRow").classList.remove("hidden");
+      $("feeInfo").innerText = ethers.utils.formatEther(feeInfo.amount) + " ETH";
+    } else {
+      $("feeRow").classList.add("hidden");
+    }
+  } catch (e) {
+    console.error("loadConfig error:", e);
+  }
+}
+
+// ==================================================
+// RESTORE SESSION (dari kontrak, bukan localStorage)
+// ==================================================
+async function restoreSession() {
+  try {
+    const session = await contract.sessions(userAddress);
+    if (session.active && !session.claimed) {
+      cachedChallenge = session.challenge;
+      sessionStartTime = Number(session.startTime);
+      // mulai PoW kalau belum ada nonce
+      if (foundNonce === null) {
+        setPowInfo("PoW: memulai...");
+        bruteForceNonce(cachedChallenge, cachedConfig.maxNonce, cachedConfig.difficulty);
+      }
+    }
+  } catch (e) {
+    console.error("restoreSession error:", e);
+  }
+}
+
+// ==================================================
+// UPDATE UI (state machine)
 // ==================================================
 async function updateUI() {
-  if (!contract) return;
+  if (!contract || !userAddress) return;
 
-  const [reward, epoch, mined, session, maxSupply] = await Promise.all([
-    contract.currentReward(),
-    contract.currentEpoch(),
-    contract.totalMined(),
-    contract.sessions(userAddress),
-    contract.MAX_SUPPLY()
-  ]);
+  try {
+    const [reward, epoch, mined, session, maxSupply] = await Promise.all([
+      contract.currentReward(),
+      contract.currentEpoch(),
+      contract.totalMined(),
+      contract.sessions(userAddress),
+      contract.MAX_SUPPLY(),
+    ]);
 
-  $('reward').innerText = fmtUnits(reward) + " LUX";
-  $('epoch').innerText = epoch.toString();
-  $('mined').innerText = fmtUnits(mined) + " LUX";
-  $('maxSupply').innerText = fmtUnits(maxSupply) + " LUX";
+    $("reward").innerText = fmtLUX(reward) + " LUX";
+    $("epoch").innerText = epoch.toString();
+    $("mined").innerText = fmtLUX(mined) + " LUX";
+    $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
 
-  sessionStartTime = Number(session.startTime);
+    const startBtn = $("startBtn");
+    const claimBtn = $("claimBtn");
 
-  const startBtn = $('startBtn');
-  const claimBtn = $('claimBtn');
+    const isActive = session.active;
+    const isClaimed = session.claimed;
 
-  // STATE 1: Belum mulai
-  if (!session.active && !session.claimed) {
-    startBtn.disabled = false;
-    startBtn.innerText = "▶️ Mulai Mining";
-    claimBtn.disabled = true;
-    $('timer').innerText = "--:--:--";
-    $('timerLabel').innerText = "Siap memulai";
-    setProgress(0);
-    $('powProgress').innerText = "PoW: siap";
-  }
-  // STATE 2: Sedang mining
-  else if (session.active && !session.claimed) {
-    startBtn.disabled = true;
-    startBtn.innerText = "⛏️ Mining berjalan...";
-    $('timerLabel').innerText = "Sisa waktu mining";
-
-    const canClaimNow = await contract.canClaim(userAddress);
-    claimBtn.disabled = !canClaimNow || foundNonce === null;
-
-    if (!canClaimNow) {
-      startPoW(session.challenge);
-    } else {
-      $('timer').innerText = "✅ Siap Claim!";
+    // STATE 1: idle (belum mulai / baru selesai claim)
+    if (!isActive && !isClaimed) {
+      currentState = "idle";
+      startBtn.disabled = false;
+      startBtn.innerText = "▶️ Mulai Mining";
+      claimBtn.disabled = true;
+      $("timer").innerText = "--:--:--";
+      $("timerLabel").innerText = "Siap memulai";
+      setProgress(0);
+      setPowInfo("PoW: idle");
     }
-  }
-  // STATE 3: Sudah claim → bisa start lagi
-  else if (!session.active && session.claimed) {
-    startBtn.disabled = false;
-    startBtn.innerText = "🔄 Mulai Mining Lagi";
-    claimBtn.disabled = true;
-    $('timer').innerText = "✅ Selesai";
-    $('timerLabel').innerText = "Klik Start untuk siklus berikutnya";
-    setProgress(100);
-  }
-}
+    // STATE 2: mining aktif
+    else if (isActive && !isClaimed) {
+      sessionStartTime = Number(session.startTime);
+      cachedChallenge = session.challenge;
 
-// ==================================================
-// PROOF OF WORK (background)
-// ==================================================
-function startPoW(challenge) {
-  if (powInterval || foundNonce !== null) return;
+      const canClaimNow = await contract.canClaim(userAddress);
 
-  const DIFFICULTY = 100_000n;
-  const MAX_UINT = (1n << 256n) - 1n;
-  const target = MAX_UINT / DIFFICULTY;
-  let nonce = 0;
-  let hashCount = 0;
-  const startTime = Date.now();
+      if (canClaimNow) {
+        currentState = "ready";
+        startBtn.disabled = true;
+        startBtn.innerText = "⛏️ Mining berjalan...";
+        claimBtn.disabled = foundNonce === null;
+        $("timer").innerText = "✅ Siap Claim";
+        $("timerLabel").innerText = foundNonce === null
+          ? "Menunggu PoW selesai..."
+          : "Klik tombol Claim";
+        setProgress(100);
+      } else {
+        currentState = "mining";
+        startBtn.disabled = true;
+        startBtn.innerText = "⛏️ Mining berjalan...";
+        claimBtn.disabled = true;
+        $("timerLabel").innerText = "Sisa waktu mining";
 
-  powInterval = setInterval(async () => {
-    const batch = 500;
-    for (let i = 0; i < batch; i++) {
-      const hash = ethers.solidityPackedKeccak256(
-        ["bytes32", "address", "uint256"],
-        [challenge, userAddress, nonce]
-      );
-      hashCount++;
-      if (BigInt(hash) < target) {
-        clearInterval(powInterval);
-        powInterval = null;
-        foundNonce = nonce;
-        $('powProgress').innerText = `✅ PoW selesai! Nonce: ${nonce}`;
-        const canClaimNow = await contract.canClaim(userAddress);
-        if (canClaimNow) $('claimBtn').disabled = false;
-        return;
+        if (foundNonce === null && !powWorker) {
+          setPowInfo("PoW: memulai...");
+          bruteForceNonce(session.challenge, cachedConfig.maxNonce, cachedConfig.difficulty);
+        }
       }
-      nonce++;
     }
-    const elapsed = (Date.now() - startTime) / 1000;
-    const rate = Math.round(hashCount / elapsed);
-    $('powProgress').innerText =
-      `PoW: ${hashCount.toLocaleString('id-ID')} hash · ${rate.toLocaleString('id-ID')} H/s`;
-  }, 50);
+    // STATE 3: claimed (transient, langsung idle)
+    else {
+      currentState = "idle";
+      startBtn.disabled = false;
+      startBtn.innerText = "🔄 Mulai Mining Lagi";
+      claimBtn.disabled = true;
+      $("timer").innerText = "✅ Selesai";
+      $("timerLabel").innerText = "Klik Start untuk siklus berikutnya";
+      setProgress(100);
+    }
+  } catch (e) {
+    console.error("updateUI error:", e);
+  }
 }
 
 // ==================================================
-// TIMER
+// TIMER (sinkron dengan getServerTime)
 // ==================================================
 async function updateTimer() {
   if (!contract || !userAddress) return;
 
   try {
+    const session = await contract.sessions(userAddress);
+    if (!session.active || session.claimed) return;
+
+    // pakai timeRemaining dari kontrak (paling akurat)
     const remaining = await contract.timeRemaining(userAddress);
     const sec = Number(remaining);
 
     if (sec <= 0) {
-      const s = await contract.sessions(userAddress);
-      if (s.active && !s.claimed) {
-        $('timer').innerText = "✅ Siap Claim!";
-        $('timerLabel').innerText = "Klik tombol Claim di bawah";
-        setProgress(100);
-        if (foundNonce !== null) $('claimBtn').disabled = false;
-      }
+      $("timer").innerText = "✅ Siap Claim";
+      $("timerLabel").innerText = foundNonce === null
+        ? "Menunggu PoW selesai..."
+        : "Klik tombol Claim di bawah";
+      setProgress(100);
+      if (foundNonce !== null) $("claimBtn").disabled = false;
       return;
     }
 
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
-    const s2 = sec % 60;
-    $('timer').innerText =
-      `${p2(h)}:${p2(m)}:${p2(s2)}`;
+    const s = sec % 60;
+    $("timer").innerText = `${p2(h)}:${p2(m)}:${p2(s)}`;
 
-    // Progress: (elapsed / total) * 100
-    const elapsed = MINING_DURATION - sec;
-    const progress = Math.min(100, (elapsed / MINING_DURATION) * 100);
+    const elapsed = cachedConfig.miningDuration - sec;
+    const progress = (elapsed / cachedConfig.miningDuration) * 100;
     setProgress(progress);
   } catch (e) {
-    console.error(e);
+    console.error("updateTimer error:", e);
   }
-}
-
-function setProgress(pct) {
-  $('progressBar').style.width = pct + '%';
 }
 
 // ==================================================
 // START MINING
 // ==================================================
-$('startBtn').onclick = async () => {
+$("startBtn").onclick = async () => {
+  if (isWorking) return;
+  isWorking = true;
   try {
     setStatus("⏳ Memulai mining...");
     foundNonce = null;
-    if (powInterval) { clearInterval(powInterval); powInterval = null; }
-    $('powProgress').innerText = "PoW: siap";
+    setPowInfo("PoW: idle");
     setProgress(0);
 
-    const clientSeed = ethers.randomBytes(32);
-    const tx = await contract.startMining(clientSeed);
-    setStatus("⏳ Menunggu konfirmasi...");
-    await tx.wait();
+    // generate secret & clientSeed (bytes32)
+    const secret = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+    const clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-    setStatus("✅ Mining dimulai! Tunggu 4 jam.", "success");
+    // cek entry fee
+    const [hasMined, feeInfo] = await Promise.all([
+      contract.hasMinedBefore(userAddress),
+      contract.getEntryFeeInfo(),
+    ]);
+
+    const needFee = feeInfo.enabled && !hasMined;
+    const value = needFee ? feeInfo.amount : ethers.BigNumber.from(0);
+
+    if (needFee) {
+      setStatus(
+        `⏳ Bayar entry fee ${ethers.utils.formatEther(feeInfo.amount)} ETH...`
+      );
+    }
+
+    const tx = await contract.startMining(secret, clientSeed, { value });
+    setStatus("⏳ Menunggu konfirmasi...");
+    const receipt = await tx.wait();
+
+    // ambil challenge dari event
+    let challenge = null;
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        if (parsed.name === "MiningStarted") {
+          challenge = parsed.args.challenge;
+          break;
+        }
+      } catch {}
+    }
+
+    if (!challenge) {
+      // fallback: baca dari kontrak
+      const session = await contract.sessions(userAddress);
+      challenge = session.challenge;
+    }
+
+    cachedChallenge = challenge;
+    setStatus("✅ Mining dimulai! Tunggu timer selesai.", "success");
+
+    // reload config (kalau fee berubah / hasMined berubah)
+    await loadConfig();
     await updateUI();
+
+    // mulai PoW
+    setPowInfo("PoW: memulai...");
+    bruteForceNonce(challenge, cachedConfig.maxNonce, cachedConfig.difficulty);
   } catch (e) {
-    setStatus("❌ " + (e.reason || e.message || e), "error");
+    console.error(e);
+    const msg = e.reason || e.data?.message || e.message || String(e);
+    setStatus("❌ " + msg, "error");
+  } finally {
+    isWorking = false;
   }
 };
 
 // ==================================================
 // CLAIM
 // ==================================================
-$('claimBtn').onclick = async () => {
+$("claimBtn").onclick = async () => {
+  if (isWorking) return;
   if (foundNonce === null) {
-    setStatus("⏳ Menunggu PoW selesai...");
+    setStatus("⏳ Menunggu PoW selesai...", "error");
     return;
   }
+  isWorking = true;
   try {
     setStatus("⏳ Claim...");
     const tx = await contract.claim(foundNonce);
     setStatus("⏳ Menunggu konfirmasi...");
     await tx.wait();
 
-    setStatus("🎉 Berhasil claim LUX! Klik Start lagi.", "success");
+    setStatus("🎉 Berhasil claim LUX! Klik Start untuk siklus berikutnya.", "success");
     foundNonce = null;
+    cachedChallenge = null;
+    setPowInfo("PoW: idle");
+    setProgress(0);
+
     await updateUI();
   } catch (e) {
-    setStatus("❌ " + (e.reason || e.message || e), "error");
+    console.error(e);
+    const msg = e.reason || e.data?.message || e.message || String(e);
+    setStatus("❌ " + msg, "error");
+  } finally {
+    isWorking = false;
   }
 };
 
 // ==================================================
-// HELPERS
+// INIT
 // ==================================================
-function shortAddr(a) {
-  return a.slice(0, 6) + "..." + a.slice(-4);
-}
-
-function fmtUnits(v) {
-  return ethers.formatUnits(v, 8);
-}
-
-function p2(n) {
-  return String(n).padStart(2, '0');
-}
-
-function setStatus(msg, type = "") {
-  const el = $('status');
-  el.innerText = msg;
-  el.className = type;
-}
+window.addEventListener("load", () => {
+  setStatus("Belum connect");
+});
 </script>
 </body>
 </html>
