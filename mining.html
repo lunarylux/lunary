@@ -126,8 +126,9 @@
   button:not(:disabled):hover { transform: translateY(-1px); }
   button:disabled { cursor: not-allowed; }
   #connectBtn {
-    background: rgba(255,255,255,0.08); color: #fff;
-    border: 1px solid rgba(255,255,255,0.1); margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; border: none; margin-bottom: 16px;
+    box-shadow: 0 6px 20px rgba(167,139,250,0.35);
   }
   #startBtn {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -191,12 +192,11 @@
   <div id="networkWarn" class="network-warn hidden">
     ⚠️ Jaringan salah. Silakan switch ke <b>Sepolia Testnet</b>.
     <br>
-    <button id="switchNetBtn">🔁 Switch ke Sepolia</button>
+    <button id="switchNetBtn" type="button">🔁 Switch ke Sepolia</button>
   </div>
 
-  <button id="connectBtn">🔌 Connect Wallet</button>
+  <button id="connectBtn" type="button">🔌 Connect Wallet</button>
 
-  <!-- STATS -->
   <div class="card hidden" id="statsCard">
     <div class="row">
       <span class="label">Wallet</span>
@@ -224,7 +224,6 @@
     </div>
   </div>
 
-  <!-- MINING -->
   <div class="card timer-card hidden" id="miningCard">
     <div id="timer">--:--:--</div>
     <div id="timerLabel">Waktu mining</div>
@@ -235,12 +234,12 @@
     <div class="pow-info" id="powProgress">PoW: idle</div>
 
     <div style="margin-top:20px;">
-      <button id="startBtn" disabled>▶️ Mulai Mining</button>
-      <button id="claimBtn" disabled>💰 Claim Reward</button>
+      <button id="startBtn" type="button" disabled>▶️ Mulai Mining</button>
+      <button id="claimBtn" type="button" disabled>💰 Claim Reward</button>
     </div>
   </div>
 
-  <div id="status">Belum connect</div>
+  <div id="status">Menunggu...</div>
 
   <div class="footer">
     © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
@@ -250,31 +249,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"></script>
 <script>
 // ==================================================
-// KONFIGURASI
+// WRAPPER: Tangkap semua error supaya UI tetap hidup
 // ==================================================
-const CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
-const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
-const SEPOLIA_CHAIN_ID_DEC = 11155111;
-const MINING_DURATION = 4 * 3600; // detik (4 jam)
+window.addEventListener("error", function(e) {
+  console.error("Global error:", e.message, e.filename, e.lineno);
+  var st = document.getElementById("status");
+  if (st) {
+    st.className = "error";
+    st.innerText = "⚠️ Script error: " + e.message + " (baris " + e.lineno + ")";
+  }
+});
 
 // ==================================================
-// ABI — SESUAI KONTRAK ASLI
+// KONFIGURASI
 // ==================================================
-const ABI = [
-  // ===== TOKEN =====
+var CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
+var SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
+var SEPOLIA_CHAIN_ID_DEC = 11155111;
+var MINING_DURATION = 4 * 3600;
+var SITE_URL = "https://lunarylux.github.io";
+
+var ABI = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
   "function totalSupply() view returns (uint256)",
   "function balanceOf(address) view returns (uint256)",
   "function MAX_SUPPLY() view returns (uint256)",
-
-  // ===== MINING =====
   "function startMining(bytes32 clientSeed)",
   "function claim(uint256 nonce)",
   "function cancelMining()",
-
-  // ===== VIEW MINING =====
   "function sessions(address) view returns (uint256 startTime, bytes32 challenge, bool active, bool claimed)",
   "function canClaim(address) view returns (bool)",
   "function timeRemaining(address) view returns (uint256)",
@@ -284,74 +288,119 @@ const ABI = [
   "function totalClaims() view returns (uint256)",
   "function DIFFICULTY() view returns (uint256)",
   "function MINING_DURATION() view returns (uint256)",
-  "function CLAIMS_PER_EPOCH() view returns (uint256)",
-  "function MAX_HALVINGS() view returns (uint256)",
-  "function TOKENS_PER_CLAIM() view returns (uint256)",
-  "function maxSupply() view returns (uint256)",
-  "function remainingMineable() view returns (uint256)",
-  "function currentDifficulty() view returns (uint256)",
-
-  // ===== EVENTS =====
   "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge)",
-  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)",
-  "event MiningCancelled(address indexed user)"
+  "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)"
 ];
 
 // ==================================================
 // STATE
 // ==================================================
-let provider, signer, contract, userAddress;
-let timerInterval = null;
-let foundNonce = null;
-let powRunning = false;
-let cachedChallenge = null;
-let cachedDifficulty = 100000n;
-let isWorking = false;
-let isConnecting = false;
-
-const $ = (id) => document.getElementById(id);
+var provider = null;
+var signer = null;
+var contract = null;
+var userAddress = null;
+var timerInterval = null;
+var foundNonce = null;
+var powRunning = false;
+var cachedChallenge = null;
+var cachedDifficulty = 100000n;
+var isWorking = false;
+var isConnecting = false;
+var ethersReady = false;
 
 // ==================================================
-// HELPERS
+// HELPERS (pakai function declaration, bukan arrow)
 // ==================================================
+function $(id) { return document.getElementById(id); }
+
 function shortAddr(a) {
   if (!a) return "—";
   return a.slice(0, 6) + "..." + a.slice(-4);
 }
 function p2(n) { return String(n).padStart(2, "0"); }
+
 function fmtLUX(v) {
   try {
-    const s = ethers.utils.formatUnits(v, 8);
-    const n = Number(s);
+    if (typeof ethers === "undefined") return v.toString();
+    var s = ethers.utils.formatUnits(v, 8);
+    var n = Number(s);
     if (!isFinite(n)) return s;
     return n.toLocaleString("id-ID", { maximumFractionDigits: 8 });
-  } catch { return v.toString(); }
+  } catch (e) { return String(v); }
 }
-function setStatus(msg, type = "") {
-  const el = $("status");
-  el.innerText = msg;
+
+function setStatus(msg, type) {
+  type = type || "";
+  var el = $("status");
+  if (!el) return;
+  el.innerHTML = msg;
   el.className = type;
 }
+
 function setProgress(pct) {
-  $("progressBar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+  var el = $("progressBar");
+  if (el) el.style.width = Math.max(0, Math.min(100, pct)) + "%";
 }
-function setPowInfo(msg) { $("powProgress").innerText = msg; }
+
+function setPowInfo(msg) {
+  var el = $("powProgress");
+  if (el) el.innerText = msg;
+}
 
 function decodeError(e) {
   if (!e) return "Unknown error";
   if (typeof e === "string") return e;
   if (e.reason) return e.reason;
-  const data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
-  if (typeof data === "string" && data.startsWith("0x08c379a0")) {
-    try { return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0]; } catch {}
+  var data = e.data || (e.error && e.error.data) || (e.error && e.error.error && e.error.error.data);
+  if (typeof data === "string" && data.indexOf("0x08c379a0") === 0) {
+    try {
+      return ethers.utils.defaultAbiCoder.decode(["string"], "0x" + data.slice(10))[0];
+    } catch (x) {}
   }
-  if (typeof data === "string" && data.startsWith("0x4e487b71")) {
-    const code = parseInt(data.slice(10, 74), 16);
-    return `Panic 0x${code.toString(16)}`;
+  if (typeof data === "string" && data.indexOf("0x4e487b71") === 0) {
+    var code = parseInt(data.slice(10, 74), 16);
+    return "Panic 0x" + code.toString(16);
   }
   if (e.message) return e.message;
   if (e.error && e.error.message) return e.error.message;
-  return "Transaction reverted (no reason)";
+  return "Transaction reverted";
+}
+
+function isMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function hasInjectedWallet() {
+  return typeof window.ethereum !== "undefined";
+}
+
+// ==================================================
+// CEK KETERSEDIAAN WALLET
+// ==================================================
+function checkWalletAvailability() {
+  if (hasInjectedWallet()) {
+    return { ok: true };
+  }
+  if (isMobile()) {
+    var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
+    return {
+      ok: false,
+      html: '❌ Wallet tidak terdeteksi di browser ini.<br><br>' +
+        '<b>Solusi:</b> Buka halaman ini di <b>MetaMask Browser</b>.<br><br>' +
+        '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
+        'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
+        '🦊 Buka di MetaMask</a>' +
+        '<br><br><span style="font-size:11px;color:#888;">Atau install MetaMask dari Play Store / App Store.</span>'
+    };
+  }
+  return {
+    ok: false,
+    html: '❌ MetaMask tidak terdeteksi.<br><br>' +
+      'Install ekstensi MetaMask di browser kamu:<br>' +
+      '<a href="https://metamask.io/download/" target="_blank" ' +
+      'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
+      '⬇️ Download MetaMask</a>'
+  };
 }
 
 // ==================================================
@@ -359,13 +408,13 @@ function decodeError(e) {
 // ==================================================
 async function ensureSepolia() {
   if (!window.ethereum) throw new Error("MetaMask tidak terdeteksi");
-  const current = await window.ethereum.request({ method: "eth_chainId" });
+  var current = await window.ethereum.request({ method: "eth_chainId" });
   if (current.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
 
   try {
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }],
+      params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }]
     });
   } catch (err) {
     if (err.code === 4902 || err.code === -32603) {
@@ -377,8 +426,8 @@ async function ensureSepolia() {
             chainName: "Sepolia Testnet",
             nativeCurrency: { name: "Sepolia ETH", symbol: "ETH", decimals: 18 },
             rpcUrls: ["https://rpc.sepolia.org", "https://sepolia.drpc.org"],
-            blockExplorerUrls: ["https://sepolia.etherscan.io"],
-          }],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"]
+          }]
         });
       } catch (addErr) {
         if (addErr.code === 4001) throw new Error("Kamu menolak menambahkan Sepolia");
@@ -391,11 +440,11 @@ async function ensureSepolia() {
     }
   }
 
-  const start = Date.now();
+  var start = Date.now();
   while (Date.now() - start < 5000) {
-    const c = await window.ethereum.request({ method: "eth_chainId" });
+    var c = await window.ethereum.request({ method: "eth_chainId" });
     if (c.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(function(r) { setTimeout(r, 200); });
   }
   throw new Error("Timeout: MetaMask tidak pindah ke Sepolia");
 }
@@ -407,48 +456,68 @@ async function doConnect() {
   if (isConnecting) return;
   isConnecting = true;
   try {
-    if (!window.ethereum) {
-      setStatus("❌ Install MetaMask dulu!", "error");
+    // cek ethers loaded
+    if (typeof ethers === "undefined") {
+      setStatus("❌ Library ethers gagal dimuat. Cek koneksi internet & reload.", "error");
+      return;
+    }
+
+    // cek wallet
+    var check = checkWalletAvailability();
+    if (!check.ok) {
+      setStatus(check.html, "error");
       return;
     }
 
     setStatus("🔓 Meminta akses akun...", "info");
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    var accounts;
+    try {
+      accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    } catch (accErr) {
+      if (accErr.code === 4001) {
+        setStatus("❌ Kamu menolak permintaan koneksi.", "error");
+        return;
+      }
+      throw accErr;
+    }
+
     if (!accounts || accounts.length === 0) {
-      setStatus("❌ Tidak ada akun", "error");
+      setStatus("❌ Tidak ada akun terdeteksi.", "error");
       return;
     }
     userAddress = accounts[0];
 
     // cek chain
-    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    var chainId = await window.ethereum.request({ method: "eth_chainId" });
     if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
       $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Bukan Sepolia. Klik tombol switch di atas.", "error");
+      setStatus("⚠️ Jaringan salah. Klik tombol <b>Switch ke Sepolia</b> di atas.", "error");
       return;
     }
     $("networkWarn").classList.add("hidden");
 
+    // buat provider
     provider = new ethers.providers.Web3Provider(window.ethereum, "any");
     signer = provider.getSigner();
     contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
     // cek kontrak ada
     setStatus("🔍 Memeriksa kontrak...", "info");
-    const code = await provider.getCode(CONTRACT_ADDRESS);
+    var code = await provider.getCode(CONTRACT_ADDRESS);
     if (!code || code === "0x") {
-      setStatus("❌ Tidak ada kontrak di alamat " + CONTRACT_ADDRESS, "error");
+      setStatus("❌ Tidak ada kontrak di alamat ini di Sepolia.", "error");
       return;
     }
 
     // ambil difficulty
     try {
-      const d = await contract.DIFFICULTY();
+      var d = await contract.DIFFICULTY();
       cachedDifficulty = BigInt(d.toString());
-    } catch {
+    } catch (x) {
       cachedDifficulty = 100000n;
     }
 
+    // update UI
     $("wallet").innerText = shortAddr(userAddress);
     $("connectBtn").style.display = "none";
     $("statsCard").classList.remove("hidden");
@@ -458,29 +527,22 @@ async function doConnect() {
     await updateUI();
 
     if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(updateTimer, 1000);
+    timerInterval = setInterval(function() {
+      updateTimer().catch(function(e) { console.error("timer:", e); });
+    }, 1000);
 
   } catch (e) {
     console.error("Connect error:", e);
-    setStatus("❌ " + decodeError(e), "error");
+    var msg = decodeError(e);
+    if (msg.toLowerCase().indexOf("user rejected") >= 0 || msg.toLowerCase().indexOf("user denied") >= 0) {
+      setStatus("❌ Kamu menolak permintaan koneksi.", "error");
+    } else {
+      setStatus("❌ " + msg, "error");
+    }
   } finally {
     isConnecting = false;
   }
 }
-
-// ==================================================
-// TOMBOL
-// ==================================================
-$("connectBtn").onclick = doConnect;
-$("switchNetBtn").onclick = async () => {
-  try {
-    setStatus("⏳ Switch ke Sepolia...", "info");
-    await ensureSepolia();
-    await doConnect();
-  } catch (e) {
-    setStatus("❌ " + decodeError(e), "error");
-  }
-};
 
 // ==================================================
 // UPDATE UI
@@ -488,14 +550,17 @@ $("switchNetBtn").onclick = async () => {
 async function updateUI() {
   if (!contract || !userAddress) return;
   try {
-    const [reward, epoch, mined, maxSupply, session, bal] = await Promise.all([
+    var results = await Promise.all([
       contract.currentReward(),
       contract.currentEpoch(),
       contract.totalMined(),
       contract.MAX_SUPPLY(),
       contract.sessions(userAddress),
-      contract.balanceOf(userAddress),
+      contract.balanceOf(userAddress)
     ]);
+
+    var reward = results[0], epoch = results[1], mined = results[2];
+    var maxSupply = results[3], session = results[4], bal = results[5];
 
     $("reward").innerText = fmtLUX(reward) + " LUX";
     $("epoch").innerText = epoch.toString();
@@ -503,11 +568,10 @@ async function updateUI() {
     $("maxSupply").innerText = fmtLUX(maxSupply) + " LUX";
     $("luxBal").innerText = fmtLUX(bal) + " LUX";
 
-    const startBtn = $("startBtn");
-    const claimBtn = $("claimBtn");
+    var startBtn = $("startBtn");
+    var claimBtn = $("claimBtn");
 
     if (!session.active && !session.claimed) {
-      // IDLE
       startBtn.disabled = false;
       startBtn.innerText = "▶️ Mulai Mining";
       claimBtn.disabled = true;
@@ -518,9 +582,8 @@ async function updateUI() {
       foundNonce = null;
       cachedChallenge = null;
     } else if (session.active && !session.claimed) {
-      // MINING
       cachedChallenge = session.challenge;
-      const canClaimNow = await contract.canClaim(userAddress);
+      var canClaimNow = await contract.canClaim(userAddress);
 
       if (canClaimNow) {
         startBtn.disabled = true;
@@ -542,7 +605,6 @@ async function updateUI() {
         }
       }
     } else {
-      // CLAIMED (transient)
       startBtn.disabled = false;
       startBtn.innerText = "🔄 Mulai Mining Lagi";
       claimBtn.disabled = true;
@@ -561,11 +623,11 @@ async function updateUI() {
 async function updateTimer() {
   if (!contract || !userAddress) return;
   try {
-    const session = await contract.sessions(userAddress);
+    var session = await contract.sessions(userAddress);
     if (!session.active || session.claimed) return;
 
-    const remaining = await contract.timeRemaining(userAddress);
-    const sec = Number(remaining);
+    var remaining = await contract.timeRemaining(userAddress);
+    var sec = Number(remaining);
 
     if (sec <= 0) {
       $("timer").innerText = "✅ Siap Claim";
@@ -577,12 +639,12 @@ async function updateTimer() {
       return;
     }
 
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    $("timer").innerText = `${p2(h)}:${p2(m)}:${p2(s)}`;
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    $("timer").innerText = p2(h) + ":" + p2(m) + ":" + p2(s);
 
-    const elapsed = MINING_DURATION - sec;
+    var elapsed = MINING_DURATION - sec;
     setProgress((elapsed / MINING_DURATION) * 100);
   } catch (e) {
     console.error("updateTimer error:", e);
@@ -596,38 +658,39 @@ function startPoW(challenge) {
   if (powRunning || foundNonce !== null) return;
   powRunning = true;
 
-  // target = type(uint256).max / DIFFICULTY
-  const MAX_UINT = (1n << 256n) - 1n;
-  const target = MAX_UINT / cachedDifficulty;
+  var MAX_UINT = (1n << 256n) - 1n;
+  var target = MAX_UINT / cachedDifficulty;
 
-  let nonce = 0;
-  let hashCount = 0;
-  const startTime = Date.now();
-  const batch = 500;
+  var nonce = 0;
+  var hashCount = 0;
+  var startTime = Date.now();
+  var batch = 500;
 
   function tick() {
     if (foundNonce !== null) { powRunning = false; return; }
 
-    for (let i = 0; i < batch; i++) {
-      const hash = ethers.utils.solidityKeccak256(
+    for (var i = 0; i < batch; i++) {
+      var hash = ethers.utils.solidityKeccak256(
         ["bytes32", "address", "uint256"],
         [challenge, userAddress, nonce]
       );
       hashCount++;
       if (BigInt(hash) < target) {
         foundNonce = nonce;
-        setPowInfo(`✅ PoW selesai! Nonce: ${nonce.toLocaleString("id-ID")}`);
-        $("claimBtn").disabled = false;
+        setPowInfo("✅ PoW selesai! Nonce: " + nonce.toLocaleString("id-ID"));
+        var cb = $("claimBtn");
+        if (cb) cb.disabled = false;
         powRunning = false;
         return;
       }
       nonce++;
     }
 
-    const elapsed = (Date.now() - startTime) / 1000;
-    const rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
+    var elapsed = (Date.now() - startTime) / 1000;
+    var rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
     setPowInfo(
-      `PoW: ${hashCount.toLocaleString("id-ID")} hash · ${rate.toLocaleString("id-ID")} H/s · nonce ${nonce.toLocaleString("id-ID")}`
+      "PoW: " + hashCount.toLocaleString("id-ID") + " hash · " +
+      rate.toLocaleString("id-ID") + " H/s · nonce " + nonce.toLocaleString("id-ID")
     );
     setTimeout(tick, 0);
   }
@@ -637,7 +700,7 @@ function startPoW(challenge) {
 // ==================================================
 // START MINING
 // ==================================================
-$("startBtn").onclick = async () => {
+async function handleStartMining() {
   if (isWorking) return;
   isWorking = true;
   try {
@@ -647,10 +710,8 @@ $("startBtn").onclick = async () => {
     setPowInfo("PoW: idle");
     setProgress(0);
 
-    // generate clientSeed (bytes32 random)
-    const clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+    var clientSeed = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-    // estimasi gas dulu supaya revert reason jelas
     try {
       await contract.estimateGas.startMining(clientSeed);
     } catch (estErr) {
@@ -658,23 +719,22 @@ $("startBtn").onclick = async () => {
     }
 
     setStatus("⏳ Kirim transaksi...", "info");
-    const tx = await contract.startMining(clientSeed);
+    var tx = await contract.startMining(clientSeed);
     setStatus("⏳ Menunggu konfirmasi...", "info");
-    const receipt = await tx.wait();
+    var receipt = await tx.wait();
 
-    // ambil challenge dari event
-    let challenge = null;
-    for (const log of receipt.logs) {
+    var challenge = null;
+    for (var i = 0; i < receipt.logs.length; i++) {
       try {
-        const parsed = contract.interface.parseLog(log);
+        var parsed = contract.interface.parseLog(receipt.logs[i]);
         if (parsed.name === "MiningStarted") {
           challenge = parsed.args.challenge;
           break;
         }
-      } catch {}
+      } catch (x) {}
     }
     if (!challenge) {
-      const session = await contract.sessions(userAddress);
+      var session = await contract.sessions(userAddress);
       challenge = session.challenge;
     }
 
@@ -683,7 +743,6 @@ $("startBtn").onclick = async () => {
 
     await updateUI();
 
-    // mulai PoW
     setPowInfo("PoW: memulai...");
     startPoW(challenge);
 
@@ -693,12 +752,12 @@ $("startBtn").onclick = async () => {
   } finally {
     isWorking = false;
   }
-};
+}
 
 // ==================================================
 // CLAIM
 // ==================================================
-$("claimBtn").onclick = async () => {
+async function handleClaim() {
   if (isWorking) return;
   if (foundNonce === null) {
     setStatus("⏳ Menunggu PoW selesai...", "error");
@@ -714,7 +773,7 @@ $("claimBtn").onclick = async () => {
       throw new Error("Estimasi gas gagal: " + decodeError(estErr));
     }
 
-    const tx = await contract.claim(foundNonce);
+    var tx = await contract.claim(foundNonce);
     setStatus("⏳ Menunggu konfirmasi...", "info");
     await tx.wait();
 
@@ -732,15 +791,62 @@ $("claimBtn").onclick = async () => {
   } finally {
     isWorking = false;
   }
-};
+}
 
 // ==================================================
-// EVENT LISTENER (sekali)
+// BIND EVENT LISTENERS (dipanggil setelah DOM ready)
 // ==================================================
-if (window.ethereum && !window.__luxListenersBound) {
+function bindEventListeners() {
+  var btn = $("connectBtn");
+  if (btn) {
+    btn.addEventListener("click", function(e) {
+      e.preventDefault();
+      console.log("Connect button clicked");
+      doConnect();
+    });
+  } else {
+    console.error("connectBtn tidak ditemukan!");
+  }
+
+  var sw = $("switchNetBtn");
+  if (sw) {
+    sw.addEventListener("click", async function(e) {
+      e.preventDefault();
+      try {
+        setStatus("⏳ Switch ke Sepolia...", "info");
+        await ensureSepolia();
+        await doConnect();
+      } catch (err) {
+        setStatus("❌ " + decodeError(err), "error");
+      }
+    });
+  }
+
+  var sb = $("startBtn");
+  if (sb) {
+    sb.addEventListener("click", function(e) {
+      e.preventDefault();
+      handleStartMining();
+    });
+  }
+
+  var cb = $("claimBtn");
+  if (cb) {
+    cb.addEventListener("click", function(e) {
+      e.preventDefault();
+      handleClaim();
+    });
+  }
+}
+
+// ==================================================
+// EVENT WALLET
+// ==================================================
+function bindWalletListeners() {
+  if (!window.ethereum || window.__luxListenersBound) return;
   window.__luxListenersBound = true;
 
-  window.ethereum.on("accountsChanged", (accs) => {
+  window.ethereum.on("accountsChanged", function(accs) {
     if (!accs || accs.length === 0) {
       setStatus("🔒 Wallet disconnected", "error");
       $("connectBtn").style.display = "block";
@@ -751,28 +857,86 @@ if (window.ethereum && !window.__luxListenersBound) {
     doConnect();
   });
 
-  window.ethereum.on("chainChanged", (hex) => {
-    const id = parseInt(hex, 16);
+  window.ethereum.on("chainChanged", function(hex) {
+    var id = parseInt(hex, 16);
     if (id === SEPOLIA_CHAIN_ID_DEC) {
       doConnect();
     } else {
       $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Pindah dari Sepolia. Switch kembali.", "error");
+      setStatus("⚠️ Pindah dari Sepolia. Klik Switch ke Sepolia.", "error");
     }
   });
 }
 
 // ==================================================
-// AUTO RECONNECT
+// INIT (dipanggil setelah DOM siap)
 // ==================================================
-window.addEventListener("load", async () => {
-  if (!window.ethereum) {
-    setStatus("Belum connect · Install MetaMask");
+async function init() {
+  console.log("=== Lunary Mining Init ===");
+  console.log("DOM ready");
+  console.log("ethers loaded:", typeof ethers !== "undefined");
+  console.log("window.ethereum:", typeof window.ethereum);
+  console.log("isMobile:", isMobile());
+
+  // bind tombol DULU, sebelum apapun
+  bindEventListeners();
+
+  // cek ethers
+  if (typeof ethers === "undefined") {
+    setStatus("❌ Library ethers gagal dimuat. Cek koneksi internet & reload.", "error");
     return;
   }
+
+  // cek wallet
+  if (!hasInjectedWallet()) {
+    if (isMobile()) {
+      var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
+      setStatus(
+        '💡 Buka halaman ini di <b>MetaMask Browser</b> untuk connect wallet.<br><br>' +
+        '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
+        'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;">' +
+        '🦊 Buka di MetaMask</a>',
+        "info"
+      );
+    } else {
+      setStatus("💡 Install MetaMask untuk connect wallet.", "info");
+    }
+    return;
+  }
+
+  bindWalletListeners();
+
+  // auto reconnect kalau sudah pernah connect
   try {
-    const accs = await window.ethereum.request({ method: "eth_accounts" });
-    const chain = await window.ethereum.request({ method: "eth_chainId" });
+    var accs = await window.ethereum.request({ method: "eth_accounts" });
+    var chain = await window.ethereum.request({ method: "eth_chainId" });
 
     if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
       $("networkWarn").classList.remove("hidden");
+      setStatus("⚠️ Jaringan salah. Klik tombol switch di atas.", "error");
+      if (accs && accs.length > 0) userAddress = accs[0];
+      return;
+    }
+
+    if (accs && accs.length > 0) {
+      doConnect();
+    } else {
+      setStatus("👋 Klik <b>Connect Wallet</b> untuk memulai.", "");
+    }
+  } catch (e) {
+    console.error("Auto reconnect error:", e);
+    setStatus("👋 Klik <b>Connect Wallet</b> untuk memulai.", "");
+  }
+}
+
+// ==================================================
+// JALANKAN INIT SETELAH DOM READY
+// ==================================================
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
