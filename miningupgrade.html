@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -232,9 +232,9 @@
   </div>
 
   <div id="networkWarn" class="network-warn hidden">
-    ⚠️ Jaringan salah. Silakan switch ke <b>Sepolia Testnet</b>.
+    ⚠️ Wrong network. Please switch to <b>Sepolia Testnet</b>.
     <br>
-    <button id="switchNetBtn" type="button">🔁 Switch ke Sepolia</button>
+    <button id="switchNetBtn" type="button">🔁 Switch to Sepolia</button>
   </div>
 
   <button id="connectBtn" type="button">🔌 Connect Wallet</button>
@@ -246,11 +246,11 @@
       <span class="value" id="wallet">-</span>
     </div>
     <div class="row">
-      <span class="label">Saldo LUX (wallet)</span>
+      <span class="label">LUX Balance (wallet)</span>
       <span class="value gold" id="luxBal">-</span>
     </div>
     <div class="row">
-      <span class="label">Reward saat ini</span>
+      <span class="label">Current Reward</span>
       <span class="value gold" id="reward">-</span>
     </div>
     <div class="row">
@@ -258,42 +258,42 @@
       <span class="value" id="epoch">-</span>
     </div>
     <div class="row">
-      <span class="label">Total mined</span>
+      <span class="label">Total Mined</span>
       <span class="value" id="mined">-</span>
     </div>
     <div class="row">
-      <span class="label">Max supply</span>
+      <span class="label">Max Supply</span>
       <span class="value" id="maxSupply">-</span>
     </div>
   </div>
 
-  <!-- STATUS MINER -->
+  <!-- MINER STATUS -->
   <div class="card hidden" id="minerCard">
-    <div class="card-title">🔑 Status Miner</div>
+    <div class="card-title">🔑 Miner Status</div>
     <div class="row">
-      <span class="label">Entry fee</span>
+      <span class="label">Entry Fee</span>
       <span class="value" id="minerFeeInfo">-</span>
     </div>
     <div class="row">
-      <span class="label">Status whitelist</span>
+      <span class="label">Whitelist Status</span>
       <span class="value" id="minerAuthStatus">-</span>
     </div>
     <div class="row">
-      <span class="label">Boleh mining?</span>
+      <span class="label">Allowed to Mine?</span>
       <span class="value" id="minerAllowedStatus">-</span>
     </div>
     <div id="payFeeWrap" class="hidden" style="margin-top:12px;">
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center;">
-        Kamu belum terdaftar. Bayar fee sekali untuk bisa mining.
+        You are not registered yet. Pay the fee once to enable mining.
       </div>
-      <button id="payFeeBtn" type="button" disabled>💳 Bayar Fee & Daftar</button>
+      <button id="payFeeBtn" type="button" disabled>💳 Pay Fee & Register</button>
     </div>
   </div>
 
   <!-- MINING -->
   <div class="card timer-card hidden" id="miningCard">
     <div id="timer">--:--:--</div>
-    <div id="timerLabel">Waktu mining</div>
+    <div id="timerLabel">Mining Time</div>
 
     <div class="progress-wrap">
       <div id="progressBar"></div>
@@ -301,30 +301,30 @@
     <div class="pow-info" id="powProgress">PoW: idle</div>
 
     <div style="margin-top:20px;">
-      <button id="startBtn" type="button" disabled>▶️ Mulai Mining</button>
+      <button id="startBtn" type="button" disabled>▶️ Start Mining</button>
       <button id="claimBtn" type="button" disabled>💰 Claim Reward</button>
     </div>
   </div>
 
   <!-- PENDING BALANCE -->
   <div class="card hidden" id="pendingCard">
-    <div class="card-title gold">💎 Saldo Mined (Belum di Wallet)</div>
+    <div class="card-title gold">💎 Mined Balance (Not in Wallet)</div>
     <div class="row">
-      <span class="label">Saldo pending</span>
+      <span class="label">Pending Balance</span>
       <span class="value gold" id="pendingBalance">-</span>
     </div>
     <div class="row">
-      <span class="label">Min. withdraw</span>
+      <span class="label">Min. Withdraw</span>
       <span class="value" id="minClaimInfo">-</span>
     </div>
     <div class="mini-bar"><div id="pendingBar"></div></div>
     <div class="mini-info" id="pendingInfo">-</div>
     <div style="margin-top:12px;">
-      <button id="withdrawBtn" type="button" disabled>🏦 Withdraw ke Wallet</button>
+      <button id="withdrawBtn" type="button" disabled>🏦 Withdraw to Wallet</button>
     </div>
   </div>
 
-  <div id="status">Menunggu...</div>
+  <div id="status">Waiting...</div>
 
   <div class="footer">
     © 2025 Lunary · <a href="https://lunary.xyz" target="_blank">lunary.xyz</a>
@@ -341,23 +341,22 @@ window.addEventListener("error", function(e) {
   var st = document.getElementById("status");
   if (st) {
     st.className = "error";
-    st.innerText = "⚠️ Script error: " + e.message + " (baris " + e.lineno + ")";
+    st.innerText = "⚠️ Script error: " + e.message + " (line " + e.lineno + ")";
   }
 });
 
 // ==================================================
-// KONFIGURASI
+// CONFIG
 // ==================================================
-var CONTRACT_ADDRESS = "0xB31E8b279646fD274758E21716b01f13026A2E24";
+var CONTRACT_ADDRESS = "0xb5D36A387BB75FbE69A15bf72C24998D8353a066";
 var SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
 var SEPOLIA_CHAIN_ID_DEC = 11155111;
 var SITE_URL = "https://lunarylux.github.io";
 
 // ==================================================
-// ABI — SESUAI KONTRAK BARU
+// ABI
 // ==================================================
 var ABI = [
-  // token
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
@@ -366,7 +365,6 @@ var ABI = [
   "function MAX_SUPPLY() view returns (uint256)",
   "function MIN_CLAIM_AMOUNT() view returns (uint256)",
 
-  // mining
   "function startMining(bytes32 clientSeed)",
   "function claim(uint256 nonce)",
   "function cancelMining()",
@@ -380,21 +378,18 @@ var ABI = [
   "function DIFFICULTY() view returns (uint256)",
   "function MINING_DURATION() view returns (uint256)",
 
-  // fee miner
   "function minerFeeEnabled() view returns (bool)",
   "function minerFee() view returns (uint256)",
   "function addMiner(address miner) payable",
   "function authorizedMiners(address) view returns (bool)",
   "function isMinerAllowed(address) view returns (bool)",
 
-  // pending claim
   "function minedBalance(address) view returns (uint256)",
   "function totalPendingClaims() view returns (uint256)",
   "function canWithdraw(address) view returns (bool)",
   "function amountNeededToWithdraw(address) view returns (uint256)",
   "function claimToWallet()",
 
-  // event
   "event MiningStarted(address indexed user, uint256 startTime, bytes32 challenge)",
   "event MiningClaimed(address indexed user, uint256 reward, uint256 epoch)",
   "event MinedAccumulated(address indexed user, uint256 amount, uint256 newBalance)",
@@ -422,12 +417,11 @@ var sessionDuration = 14400;
 var serverOffset = 0;
 var canClaimTime = false;
 
-// fee & pending state
 var cachedMinerFeeEnabled = false;
 var cachedMinerFee = 0n;
 var cachedMinerAuthorized = false;
 var cachedMinerAllowed = false;
-var cachedMinClaim = 20n * 100000000n; // 20 * 10^8
+var cachedMinClaim = 20n * 100000000n;
 var cachedPendingBalance = 0n;
 
 var isWorking = false;
@@ -450,7 +444,7 @@ function fmtLUX(v) {
     var s = ethers.utils.formatUnits(v, 8);
     var n = Number(s);
     if (!isFinite(n)) return s;
-    return n.toLocaleString("id-ID", { maximumFractionDigits: 8 });
+    return n.toLocaleString("en-US", { maximumFractionDigits: 8 });
   } catch (e) { return String(v); }
 }
 function fmtEth(v) {
@@ -458,7 +452,7 @@ function fmtEth(v) {
     var s = ethers.utils.formatEther(v);
     var n = Number(s);
     if (!isFinite(n)) return s;
-    return n.toLocaleString("id-ID", { maximumFractionDigits: 6 });
+    return n.toLocaleString("en-US", { maximumFractionDigits: 6 });
   } catch (e) { return String(v); }
 }
 
@@ -510,18 +504,18 @@ function checkWalletAvailability() {
     var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
     return {
       ok: false,
-      html: '❌ Wallet tidak terdeteksi di browser ini.<br><br>' +
-        '<b>Solusi:</b> Buka halaman ini di <b>MetaMask Browser</b>.<br><br>' +
+      html: '❌ Wallet not detected in this browser.<br><br>' +
+        '<b>Solution:</b> Open this page in <b>MetaMask Browser</b>.<br><br>' +
         '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
         'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
-        '🦊 Buka di MetaMask</a>' +
-        '<br><br><span style="font-size:11px;color:#888;">Atau install MetaMask dari Play Store / App Store.</span>'
+        '🦊 Open in MetaMask</a>' +
+        '<br><br><span style="font-size:11px;color:#888;">Or install MetaMask from Play Store / App Store.</span>'
     };
   }
   return {
     ok: false,
-    html: '❌ MetaMask tidak terdeteksi.<br><br>' +
-      'Install ekstensi MetaMask di browser kamu:<br>' +
+    html: '❌ MetaMask not detected.<br><br>' +
+      'Install the MetaMask extension in your browser:<br>' +
       '<a href="https://metamask.io/download/" target="_blank" ' +
       'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;margin-top:8px;">' +
       '⬇️ Download MetaMask</a>'
@@ -529,7 +523,7 @@ function checkWalletAvailability() {
 }
 
 // ==================================================
-// SYNC WAKTU SERVER
+// SYNC SERVER TIME
 // ==================================================
 async function syncServerTime() {
   try {
@@ -539,7 +533,7 @@ async function syncServerTime() {
       serverOffset = block.timestamp - localNow;
     }
   } catch (e) {
-    console.warn("Gagal sync waktu server:", e);
+    console.warn("Failed to sync server time:", e);
     serverOffset = 0;
   }
 }
@@ -548,7 +542,7 @@ async function syncServerTime() {
 // SWITCH / ADD SEPOLIA
 // ==================================================
 async function ensureSepolia() {
-  if (!window.ethereum) throw new Error("MetaMask tidak terdeteksi");
+  if (!window.ethereum) throw new Error("MetaMask not detected");
   var current = await window.ethereum.request({ method: "eth_chainId" });
   if (current.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
 
@@ -571,13 +565,13 @@ async function ensureSepolia() {
           }]
         });
       } catch (addErr) {
-        if (addErr.code === 4001) throw new Error("Kamu menolak menambahkan Sepolia");
-        throw new Error("Gagal tambah Sepolia: " + (addErr.message || addErr));
+        if (addErr.code === 4001) throw new Error("You rejected adding Sepolia");
+        throw new Error("Failed to add Sepolia: " + (addErr.message || addErr));
       }
     } else if (err.code === 4001) {
-      throw new Error("Kamu menolak switch ke Sepolia");
+      throw new Error("You rejected switching to Sepolia");
     } else {
-      throw new Error("Gagal switch: " + (err.message || err));
+      throw new Error("Failed to switch: " + (err.message || err));
     }
   }
 
@@ -587,7 +581,7 @@ async function ensureSepolia() {
     if (c.toLowerCase() === SEPOLIA_CHAIN_ID_HEX.toLowerCase()) return true;
     await new Promise(function(r) { setTimeout(r, 200); });
   }
-  throw new Error("Timeout: MetaMask tidak pindah ke Sepolia");
+  throw new Error("Timeout: MetaMask did not switch to Sepolia");
 }
 
 // ==================================================
@@ -598,7 +592,7 @@ async function doConnect() {
   isConnecting = true;
   try {
     if (typeof ethers === "undefined") {
-      setStatus("❌ Library ethers gagal dimuat. Cek koneksi internet & reload.", "error");
+      setStatus("❌ ethers library failed to load. Check internet & reload.", "error");
       return;
     }
 
@@ -608,20 +602,20 @@ async function doConnect() {
       return;
     }
 
-    setStatus("🔓 Meminta akses akun...", "info");
+    setStatus("🔓 Requesting account access...", "info");
     var accounts;
     try {
       accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     } catch (accErr) {
       if (accErr.code === 4001) {
-        setStatus("❌ Kamu menolak permintaan koneksi.", "error");
+        setStatus("❌ You rejected the connection request.", "error");
         return;
       }
       throw accErr;
     }
 
     if (!accounts || accounts.length === 0) {
-      setStatus("❌ Tidak ada akun terdeteksi.", "error");
+      setStatus("❌ No account detected.", "error");
       return;
     }
     userAddress = accounts[0];
@@ -629,7 +623,7 @@ async function doConnect() {
     var chainId = await window.ethereum.request({ method: "eth_chainId" });
     if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
       $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Jaringan salah. Klik tombol <b>Switch ke Sepolia</b> di atas.", "error");
+      setStatus("⚠️ Wrong network. Click <b>Switch to Sepolia</b> above.", "error");
       return;
     }
     $("networkWarn").classList.add("hidden");
@@ -638,14 +632,13 @@ async function doConnect() {
     signer = provider.getSigner();
     contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-    setStatus("🔍 Memeriksa kontrak...", "info");
+    setStatus("🔍 Checking contract...", "info");
     var code = await provider.getCode(CONTRACT_ADDRESS);
     if (!code || code === "0x") {
-      setStatus("❌ Tidak ada kontrak di alamat ini di Sepolia.", "error");
+      setStatus("❌ No contract found at this address on Sepolia.", "error");
       return;
     }
 
-    // cache constants
     try {
       var d = await contract.DIFFICULTY();
       cachedDifficulty = BigInt(d.toString());
@@ -688,7 +681,7 @@ async function doConnect() {
     var msg = decodeError(e);
     if (msg.toLowerCase().indexOf("user rejected") >= 0 ||
         msg.toLowerCase().indexOf("user denied") >= 0) {
-      setStatus("❌ Kamu menolak permintaan koneksi.", "error");
+      setStatus("❌ You rejected the connection request.", "error");
     } else {
       setStatus("❌ " + msg, "error");
     }
@@ -741,11 +734,10 @@ async function updateUI() {
     if (feeEnabled) {
       $("minerFeeInfo").innerHTML = `<span class="badge warn">ON</span> ${fmtEth(fee)} ETH`;
     } else {
-      $("minerFeeInfo").innerHTML = `<span class="badge ok">OFF</span> Bebas`;
+      $("minerFeeInfo").innerHTML = `<span class="badge ok">OFF</span> Free`;
     }
-    $("minerAuthStatus").innerHTML = authorized
-      ? '<span class="badge ok">AUTHORIZED</span>'
-      : '<span class="badge err">BELUM</span>';
+    $("minerAuthStatus").innerHTML = authorized      ? '<span class="badge ok">AUTHORIZED</span>'
+      : '<span class="badge err">NOT YET</span>';
     $("minerAllowedStatus").innerHTML = allowed
       ? '<span class="badge ok">YES</span>'
       : '<span class="badge err">NO</span>';
@@ -756,7 +748,7 @@ async function updateUI() {
     if (feeEnabled && !authorized) {
       payWrap.classList.remove("hidden");
       payBtn.disabled = false;
-      payBtn.innerText = `💳 Bayar ${fmtEth(fee)} ETH & Daftar Miner`;
+      payBtn.innerText = `💳 Pay ${fmtEth(fee)} ETH & Register Miner`;
     } else {
       payWrap.classList.add("hidden");
       payBtn.disabled = true;
@@ -778,13 +770,13 @@ async function updateUI() {
     pendingBarEl.style.width = pctPending + "%";
 
     if (pendingBal >= cachedMinClaim && cachedMinClaim > 0n) {
-      pendingInfoEl.innerHTML = `<span style="color:var(--success);font-weight:700;">✅ Siap withdraw!</span>`;
+      pendingInfoEl.innerHTML = `<span style="color:var(--success);font-weight:700;">✅ Ready to withdraw!</span>`;
       withdrawBtn.disabled = false;
-      withdrawBtn.innerText = `🏦 Withdraw ${fmtLUX(pendingBal)} LUX ke Wallet`;
+      withdrawBtn.innerText = `🏦 Withdraw ${fmtLUX(pendingBal)} LUX to Wallet`;
     } else {
       var needed = cachedMinClaim - pendingBal;
       if (needed < 0n) needed = 0n;
-      pendingInfoEl.innerHTML = `Butuh <b>${fmtLUX(needed)} LUX</b> lagi untuk withdraw`;
+      pendingInfoEl.innerHTML = `Need <b>${fmtLUX(needed)} LUX</b> more to withdraw`;
       withdrawBtn.disabled = true;
       withdrawBtn.innerText = `🏦 Withdraw (min ${fmtLUX(cachedMinClaim)} LUX)`;
     }
@@ -793,18 +785,21 @@ async function updateUI() {
     var startBtn = $("startBtn");
     var claimBtn = $("claimBtn");
 
+    // IMPORTANT: Reset visual state tombol start setiap updateUI
+    // supaya tidak "nyangkut" disabled setelah authorize.
     if (!session.active && !session.claimed) {
       // IDLE
-      startBtn.disabled = !allowed;
       if (!allowed) {
-        startBtn.innerText = "🔒 Belum whitelist";
+        startBtn.disabled = true;
+        startBtn.innerText = "🔒 Not Whitelisted";
       } else {
-        startBtn.innerText = "▶️ Mulai Mining";
+        startBtn.disabled = false;
+        startBtn.innerText = "▶️ Start Mining";
       }
       claimBtn.disabled = true;
       claimBtn.innerText = "💰 Claim Reward";
       $("timer").innerText = "--:--:--";
-      $("timerLabel").innerText = allowed ? "Siap memulai" : "Bayar fee dulu";
+      $("timerLabel").innerText = allowed ? "Ready to start" : "Pay the fee first";
       setProgress(0);
       setPowInfo("PoW: idle");
       foundNonce = null;
@@ -822,43 +817,48 @@ async function updateUI() {
       var remaining = sessionDuration - elapsed;
 
       startBtn.disabled = true;
-      startBtn.innerText = "⛏️ Mining berjalan...";
+      startBtn.innerText = "⛏️ Mining in progress...";
 
       if (foundNonce === null && !powRunning) {
-        setPowInfo("PoW: memulai...");
+        setPowInfo("PoW: starting...");
         startPoW(session.challenge);
       }
 
       if (remaining <= 0) {
         canClaimTime = true;
-        $("timer").innerText = "✅ Siap Claim";
+        $("timer").innerText = "✅ Ready to Claim";
         setProgress(100);
 
         if (foundNonce === null) {
           claimBtn.disabled = true;
-          claimBtn.innerText = "⏳ PoW berjalan...";
-          $("timerLabel").innerText = "Menunggu PoW selesai...";
+          claimBtn.innerText = "⏳ PoW running...";
+          $("timerLabel").innerText = "Waiting for PoW...";
         } else {
           claimBtn.disabled = false;
           claimBtn.innerText = "💰 Claim Reward";
-          $("timerLabel").innerText = "Klik tombol Claim";
+          $("timerLabel").innerText = "Click the Claim button";
         }
       } else {
         canClaimTime = false;
         claimBtn.disabled = true;
         claimBtn.innerText = "💰 Claim Reward";
-        $("timerLabel").innerText = "Sisa waktu mining";
+        $("timerLabel").innerText = "Mining time remaining";
         updateTimer();
       }
 
     } else {
       // CLAIMED
-      startBtn.disabled = !allowed;
-      startBtn.innerText = allowed ? "🔄 Mulai Mining Lagi" : "🔒 Belum whitelist";
+      if (!allowed) {
+        startBtn.disabled = true;
+        startBtn.innerText = "🔒 Not Whitelisted";
+      } else {
+        startBtn.disabled = false;
+        startBtn.innerText = "🔄 Mine Again";
+      }
       claimBtn.disabled = true;
       claimBtn.innerText = "💰 Claim Reward";
-      $("timer").innerText = "✅ Selesai";
-      $("timerLabel").innerText = "Klik Start untuk siklus berikutnya";
+      $("timer").innerText = "✅ Done";
+      $("timerLabel").innerText = "Click Start for the next cycle";
       setProgress(100);
       canClaimTime = false;
     }
@@ -868,7 +868,7 @@ async function updateUI() {
 }
 
 // ==================================================
-// TIMER LOKAL
+// LOCAL TIMER
 // ==================================================
 function updateTimer() {
   if (!userAddress) return;
@@ -881,7 +881,7 @@ function updateTimer() {
   var claimBtn = $("claimBtn");
 
   if (sec <= 0) {
-    $("timer").innerText = "✅ Siap Claim";
+    $("timer").innerText = "✅ Ready to Claim";
     setProgress(100);
     canClaimTime = true;
 
@@ -890,13 +890,13 @@ function updateTimer() {
         claimBtn.disabled = false;
         claimBtn.innerText = "💰 Claim Reward";
       }
-      $("timerLabel").innerText = "Klik tombol Claim di bawah";
+      $("timerLabel").innerText = "Click the Claim button below";
     } else {
       if (claimBtn) {
         claimBtn.disabled = true;
-        claimBtn.innerText = "⏳ PoW berjalan...";
+        claimBtn.innerText = "⏳ PoW running...";
       }
-      $("timerLabel").innerText = "Menunggu PoW selesai...";
+      $("timerLabel").innerText = "Waiting for PoW...";
     }
     return;
   }
@@ -940,7 +940,7 @@ function startPoW(challenge) {
       hashCount++;
       if (BigInt(hash) < target) {
         foundNonce = nonce;
-        setPowInfo("✅ PoW selesai! Nonce: " + nonce.toLocaleString("id-ID"));
+        setPowInfo("✅ PoW complete! Nonce: " + nonce.toLocaleString("en-US"));
         powRunning = false;
 
         var cb = $("claimBtn");
@@ -948,11 +948,11 @@ function startPoW(challenge) {
           if (canClaimTime) {
             cb.disabled = false;
             cb.innerText = "💰 Claim Reward";
-            $("timerLabel").innerText = "Klik tombol Claim";
+            $("timerLabel").innerText = "Click the Claim button";
           } else {
             cb.disabled = true;
-            cb.innerText = "⏳ Menunggu timer...";
-            $("timerLabel").innerText = "PoW selesai, tunggu timer";
+            cb.innerText = "⏳ Waiting for timer...";
+            $("timerLabel").innerText = "PoW done, waiting for timer";
           }
         }
         return;
@@ -963,8 +963,8 @@ function startPoW(challenge) {
     var elapsed = (Date.now() - startTime) / 1000;
     var rate = elapsed > 0 ? Math.round(hashCount / elapsed) : 0;
     setPowInfo(
-      "PoW: " + hashCount.toLocaleString("id-ID") + " hash · " +
-      rate.toLocaleString("id-ID") + " H/s · nonce " + nonce.toLocaleString("id-ID")
+      "PoW: " + hashCount.toLocaleString("en-US") + " hash · " +
+      rate.toLocaleString("en-US") + " H/s · nonce " + nonce.toLocaleString("en-US")
     );
     setTimeout(tick, 0);
   }
@@ -979,30 +979,79 @@ async function handlePayFee() {
   isWorking = true;
   try {
     if (!cachedMinerFeeEnabled) {
-      setStatus("ℹ️ Entry fee sedang nonaktif. Kamu bisa langsung mining.", "info");
+      setStatus("ℹ️ Entry fee is currently off. You can mine right away.", "info");
       return;
     }
     if (cachedMinerAuthorized) {
-      setStatus("✅ Kamu sudah terdaftar sebagai miner.", "success");
+      setStatus("✅ You are already registered as a miner.", "success");
       return;
     }
     if (cachedMinerFee <= 0n) {
-      setStatus("⚠️ Fee 0 tapi belum whitelist. Coba hubungi admin.", "error");
+      setStatus("⚠️ Fee is 0 but you are not whitelisted. Contact admin.", "error");
       return;
     }
 
     var feeLabel = fmtEth(cachedMinerFee);
-    if (!confirm(`Bayar entry fee ${feeLabel} ETH untuk mendaftar sebagai miner?\n\nFee dibayar sekali, tidak ada refund.`)) {
+    if (!confirm(`Pay entry fee ${feeLabel} ETH to register as a miner?\n\nFee is one-time, non-refundable.`)) {
       return;
     }
 
-    setStatus("⏳ Membayar fee & mendaftar...", "info");
+    setStatus("⏳ Paying fee & registering...", "info");
     var tx = await contract.addMiner(userAddress, { value: cachedMinerFee });
-    setStatus("⏳ Menunggu konfirmasi...", "info");
+    setStatus("⏳ Waiting for confirmation...", "info");
     await tx.wait();
 
-    setStatus("🎉 Berhasil terdaftar! Klik Start untuk mulai mining.", "success");
+    setStatus("⏳ Confirming whitelist status...", "info");
+
+    // ====== RETRY LOOP: tunggu sampai state on-chain benar-benar update ======
+    var maxRetries = 10;
+    var authorized = false;
+    for (var i = 0; i < maxRetries; i++) {
+      try {
+        var a = await contract.authorizedMiners(userAddress);
+        if (a) {
+          authorized = true;
+          break;
+        }
+      } catch (err) {
+        console.warn("retry authorizedMiners:", err);
+      }
+      await new Promise(function(r) { setTimeout(r, 800); });
+    }
+
+    if (!authorized) {
+      setStatus(
+        "⚠️ Transaction confirmed but whitelist not updated. " +
+        "Try clicking Refresh or reload the page.",
+        "error"
+      );
+      await updateUI();
+      return;
+    }
+
+    // Force update cache dan tombol
+    cachedMinerAuthorized = true;
+    cachedMinerAllowed = true;
+
     await updateUI();
+
+    // Safety: kalau updateUI tetap tidak enable, paksa aktifkan manual
+    var sb = $("startBtn");
+    if (sb && sb.disabled && !cachedMinerFeeEnabled === false) {
+      // cek ulang
+      try {
+        var sess = await contract.sessions(userAddress);
+        if (!sess.active && !sess.claimed) {
+          sb.disabled = false;
+          sb.innerText = "▶️ Start Mining";
+        }
+      } catch (e) {}
+    }
+
+    setStatus(
+      "🎉 Successfully registered! Click <b>Start Mining</b> to begin.",
+      "success"
+    );
   } catch (e) {
     console.error(e);
     setStatus("❌ " + decodeError(e), "error");
@@ -1018,12 +1067,23 @@ async function handleStartMining() {
   if (isWorking) return;
   isWorking = true;
   try {
-    if (!cachedMinerAllowed) {
-      setStatus("🔒 Kamu belum terdaftar sebagai miner. Bayar fee dulu.", "error");
-      return;
+    // Re-check on-chain, jangan bergantung cache saja
+    try {
+      var allowed = await contract.isMinerAllowed(userAddress);
+      if (!allowed) {
+        setStatus("🔒 You are not registered as a miner. Please pay the fee first.", "error");
+        await updateUI();
+        return;
+      }
+    } catch (chkErr) {
+      // fallback ke cache
+      if (!cachedMinerAllowed) {
+        setStatus("🔒 You are not registered as a miner. Please pay the fee first.", "error");
+        return;
+      }
     }
 
-    setStatus("⏳ Memulai mining...", "info");
+    setStatus("⏳ Starting mining...", "info");
     foundNonce = null;
     powRunning = false;
     canClaimTime = false;
@@ -1035,12 +1095,12 @@ async function handleStartMining() {
     try {
       await contract.estimateGas.startMining(clientSeed);
     } catch (estErr) {
-      throw new Error("Estimasi gas gagal: " + decodeError(estErr));
+      throw new Error("Gas estimation failed: " + decodeError(estErr));
     }
 
-    setStatus("⏳ Kirim transaksi...", "info");
+    setStatus("⏳ Sending transaction...", "info");
     var tx = await contract.startMining(clientSeed);
-    setStatus("⏳ Menunggu konfirmasi...", "info");
+    setStatus("⏳ Waiting for confirmation...", "info");
     var receipt = await tx.wait();
 
     var challenge = null;
@@ -1059,7 +1119,7 @@ async function handleStartMining() {
     }
 
     cachedChallenge = challenge;
-    setStatus("✅ Mining dimulai! Tunggu " + (sessionDuration / 3600) + " jam.", "success");
+    setStatus("✅ Mining started! Wait " + (sessionDuration / 3600) + " hours.", "success");
 
     await syncServerTime();
     await updateUI();
@@ -1073,37 +1133,37 @@ async function handleStartMining() {
 }
 
 // ==================================================
-// CLAIM → masuk minedBalance (bukan langsung ke wallet)
+// CLAIM → into minedBalance
 // ==================================================
 async function handleClaim() {
   if (isWorking) return;
 
   if (!canClaimTime) {
-    setStatus("⏳ Tunggu timer selesai dulu.", "error");
+    setStatus("⏳ Wait for the timer to finish first.", "error");
     return;
   }
   if (foundNonce === null) {
-    setStatus("⏳ Menunggu PoW selesai...", "error");
+    setStatus("⏳ Waiting for PoW to complete...", "error");
     return;
   }
 
   isWorking = true;
   try {
-    setStatus("⏳ Claim reward ke saldo mined...", "info");
+    setStatus("⏳ Claiming reward into mined balance...", "info");
 
     try {
       await contract.estimateGas.claim(foundNonce);
     } catch (estErr) {
-      throw new Error("Estimasi gas gagal: " + decodeError(estErr));
+      throw new Error("Gas estimation failed: " + decodeError(estErr));
     }
 
     var tx = await contract.claim(foundNonce);
-    setStatus("⏳ Menunggu konfirmasi...", "info");
+    setStatus("⏳ Waiting for confirmation...", "info");
     await tx.wait();
 
     setStatus(
-      "🎉 Reward masuk ke saldo mined!<br>" +
-      "Cek di section <b>Saldo Mined</b> — withdraw ke wallet setelah ≥ " +
+      "🎉 Reward added to mined balance!<br>" +
+      "Check <b>Mined Balance</b> — withdraw to wallet once it reaches ≥ " +
       fmtLUX(cachedMinClaim) + " LUX.",
       "success"
     );
@@ -1125,7 +1185,7 @@ async function handleClaim() {
 }
 
 // ==================================================
-// WITHDRAW KE WALLET (claimToWallet)
+// WITHDRAW TO WALLET
 // ==================================================
 async function handleWithdraw() {
   if (isWorking) return;
@@ -1133,27 +1193,28 @@ async function handleWithdraw() {
   try {
     if (cachedPendingBalance < cachedMinClaim) {
       setStatus(
-        "⚠️ Saldo mined belum mencapai minimum " + fmtLUX(cachedMinClaim) + " LUX.",
+        "⚠️ Mined balance has not reached the minimum " +
+        fmtLUX(cachedMinClaim) + " LUX.",
         "error"
       );
       return;
     }
 
-    if (!confirm(`Withdraw ${fmtLUX(cachedPendingBalance)} LUX ke wallet kamu?`)) return;
+    if (!confirm(`Withdraw ${fmtLUX(cachedPendingBalance)} LUX to your wallet?`)) return;
 
-    setStatus("⏳ Withdraw ke wallet...", "info");
+    setStatus("⏳ Withdrawing to wallet...", "info");
 
     try {
       await contract.estimateGas.claimToWallet();
     } catch (estErr) {
-      throw new Error("Estimasi gas gagal: " + decodeError(estErr));
+      throw new Error("Gas estimation failed: " + decodeError(estErr));
     }
 
     var tx = await contract.claimToWallet();
-    setStatus("⏳ Menunggu konfirmasi...", "info");
+    setStatus("⏳ Waiting for confirmation...", "info");
     await tx.wait();
 
-    setStatus("🎉 Berhasil! LUX sudah masuk ke wallet kamu.", "success");
+    setStatus("🎉 Success! LUX has been sent to your wallet.", "success");
     await updateUI();
   } catch (e) {
     console.error(e);
@@ -1174,7 +1235,7 @@ function bindEventListeners() {
   if (sw) sw.addEventListener("click", async function(e) {
     e.preventDefault();
     try {
-      setStatus("⏳ Switch ke Sepolia...", "info");
+      setStatus("⏳ Switching to Sepolia...", "info");
       await ensureSepolia();
       await doConnect();
     } catch (err) {
@@ -1196,7 +1257,7 @@ function bindEventListeners() {
 }
 
 // ==================================================
-// EVENT WALLET
+// WALLET EVENTS
 // ==================================================
 function bindWalletListeners() {
   if (!window.ethereum || window.__luxListenersBound) return;
@@ -1222,7 +1283,7 @@ function bindWalletListeners() {
       doConnect();
     } else {
       $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Pindah dari Sepolia. Klik Switch ke Sepolia.", "error");
+      setStatus("⚠️ Moved from Sepolia. Click Switch to Sepolia.", "error");
     }
   });
 }
@@ -1239,7 +1300,7 @@ async function init() {
   bindEventListeners();
 
   if (typeof ethers === "undefined") {
-    setStatus("❌ Library ethers gagal dimuat. Cek koneksi internet & reload.", "error");
+    setStatus("❌ ethers library failed to load. Check internet & reload.", "error");
     return;
   }
 
@@ -1247,14 +1308,14 @@ async function init() {
     if (isMobile()) {
       var dappUrl = SITE_URL.replace(/^https?:\/\//, "");
       setStatus(
-        '💡 Buka halaman ini di <b>MetaMask Browser</b> untuk connect wallet.<br><br>' +
+        '💡 Open this page in <b>MetaMask Browser</b> to connect your wallet.<br><br>' +
         '<a href="https://metamask.app.link/dapp/' + dappUrl + '" ' +
         'style="display:inline-block;padding:10px 16px;background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;">' +
-        '🦊 Buka di MetaMask</a>',
+        '🦊 Open in MetaMask</a>',
         "info"
       );
     } else {
-      setStatus("💡 Install MetaMask untuk connect wallet.", "info");
+      setStatus("💡 Install MetaMask to connect your wallet.", "info");
     }
     return;
   }
@@ -1267,7 +1328,7 @@ async function init() {
 
     if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID_HEX.toLowerCase()) {
       $("networkWarn").classList.remove("hidden");
-      setStatus("⚠️ Jaringan salah. Klik tombol switch di atas.", "error");
+      setStatus("⚠️ Wrong network. Click the switch button above.", "error");
       if (accs && accs.length > 0) userAddress = accs[0];
       return;
     }
@@ -1275,11 +1336,11 @@ async function init() {
     if (accs && accs.length > 0) {
       doConnect();
     } else {
-      setStatus("👋 Klik <b>Connect Wallet</b> untuk memulai.", "");
+      setStatus("👋 Click <b>Connect Wallet</b> to get started.", "");
     }
   } catch (e) {
     console.error("Auto reconnect error:", e);
-    setStatus("👋 Klik <b>Connect Wallet</b> untuk memulai.", "");
+    setStatus("👋 Click <b>Connect Wallet</b> to get started.", "");
   }
 }
 
