@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts@5.0.2/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts@5.0.2/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts@5.0.2/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts@5.0.2/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts@5.0.2/utils/Pausable.sol";
-import "@openzeppelin/contracts@5.0.2/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Lunary (LUX)
@@ -86,10 +86,7 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
     event WithdrawnToWallet(address indexed user, uint256 amount);
 
     // ============ CONSTRUCTOR ============
-    constructor()
-        ERC20("Lunary", "LUX")
-        Ownable(msg.sender)
-    {
+    constructor() ERC20("Lunary", "LUX") Ownable(msg.sender) {
         minerFeeEnabled = true;
         minerFee = DEFAULT_MINER_FEE;
         feeRecipient = msg.sender;
@@ -169,6 +166,16 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
         return minRequired - bal;
     }
 
+    // ============ INTERNAL: SAFE LUX RESERVE ============
+    /// @dev Mengembalikan saldo LUX kontrak yang TIDAK termasuk pending claims.
+    ///      Aman terhadap underflow.
+    function _availableLUX() internal view returns (uint256) {
+        uint256 bal = balanceOf(address(this));
+        uint256 pending = totalPendingClaims;
+        if (bal <= pending) return 0;
+        return bal - pending;
+    }
+
     // ============ MINING ============
     function startMining(bytes32 clientSeed) external nonReentrant whenNotPaused {
         if (minerFeeEnabled) {
@@ -179,16 +186,11 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
         require(currentReward() > 0, "Mining finished");
         require(totalMined < MAX_SUPPLY, "Max supply reached");
 
-        // Safe: block.number >= 1 pada semua chain produksi.
-        // Gunakan blockhash(block.number - 1) hanya jika block.number > 0.
         bytes32 prevHash = block.number > 0 ? blockhash(block.number - 1) : bytes32(0);
 
-        bytes32 challenge = keccak256(abi.encodePacked(
-            prevHash,
-            msg.sender,
-            clientSeed,
-            block.timestamp
-        ));
+        bytes32 challenge = keccak256(
+            abi.encodePacked(prevHash, msg.sender, clientSeed, block.timestamp)
+        );
 
         sessions[msg.sender] = Session({
             startTime: block.timestamp,
@@ -279,10 +281,12 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
         authorizedMiners[miner] = true;
         totalAuthorizedMiners++;
 
-        if (msg.value > 0) {
-            accumulatedFees += msg.value;
+        // Catat HANYA fee yang benar-benar dipakai (bukan seluruh msg.value)
+        if (requiredFee > 0) {
+            accumulatedFees += requiredFee;
         }
 
+        // Refund kelebihan
         if (msg.value > requiredFee) {
             uint256 refund = msg.value - requiredFee;
             (bool ok, ) = msg.sender.call{value: refund}("");
@@ -339,6 +343,8 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
         accumulatedFees = 0;
 
         address to = feeRecipient;
+        require(to != address(0), "Fee recipient not set");
+
         (bool ok, ) = to.call{value: amount}("");
         require(ok, "Withdraw failed");
 
@@ -367,8 +373,7 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
         if (token == address(0)) {
             require(amount <= address(this).balance, "Insufficient POL balance");
         } else if (token == address(this)) {
-            uint256 availableLUX = balanceOf(address(this)) - totalPendingClaims;
-            require(amount <= availableLUX, "Insufficient LUX (pending claims)");
+            require(amount <= _availableLUX(), "Insufficient LUX (pending claims)");
         } else {
             require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient ERC20 balance");
         }
@@ -401,8 +406,7 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
             (bool ok, ) = ownerAddr.call{value: r.amount}("");
             require(ok, "POL transfer failed");
         } else if (r.token == address(this)) {
-            uint256 availableLUX = balanceOf(address(this)) - totalPendingClaims;
-            require(r.amount <= availableLUX, "Insufficient LUX (pending claims)");
+            require(r.amount <= _availableLUX(), "Insufficient LUX (pending claims)");
             _transfer(address(this), ownerAddr, r.amount);
         } else {
             IERC20(r.token).safeTransfer(ownerAddr, r.amount);
@@ -450,8 +454,6 @@ contract Lunary is ERC20, Pausable, ReentrancyGuard, Ownable {
     }
 
     function getAvailableLUXForRescue() external view returns (uint256) {
-        uint256 balance = balanceOf(address(this));
-        if (balance <= totalPendingClaims) return 0;
-        return balance - totalPendingClaims;
+        return _availableLUX();
     }
 }
